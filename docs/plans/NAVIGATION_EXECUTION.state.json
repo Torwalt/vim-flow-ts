@@ -24,6 +24,30 @@
         "reasoning": 9065,
         "cache_read": 797824
       }
+    },
+    "2.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:09:52+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "a59b439d8dcf19b0cfa63addf5c29bbe6dd6a63b",
+      "commits": [
+        "506be44b1140bb3e83d4c0b770797ddbd9bd1c9a Add counted axis movement"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 2.1\n\n**What landed**\n- `506be44` — `src/core/axis.ts` implements `AxisApi.axisMove`; `src/core/navigation.ts`\n  exports `axis` plus the `AxisApi`/`Direction` types; the contract file registers\n  `registerAxis(axis)` after the model group; `tests/core/navigation-axis.test.ts`\n  adds independent zero, edge, huge-count and coordinate-preservation examples.\n  The same commit records the arithmetic choices in\n  `docs/experiments/navigation.md`.\n\n**Landmark drift**\n- None. `spec/navigation/api.ts`, `registerAxis` in checks.ts and the prior model\n  entry all matched the plan.\n- `tests/core/navigation-contract.test.ts` now has two cumulative groups:\n  model and axis. It reports 14 named contract checks.\n\n**Deviations from the work order**\n- None. Landmarks, contract registration and independent examples were\n  implemented as written.\n- Evidence is in the same commit rather than a second evidence-only commit; the\n  unit is one commit.\n\n**What the next session must know**\n- `src/core/navigation.ts` is still the stable entry. Add the next API and its\n  implementation export cumulatively; do not remove `axis` or `model`.\n- `src/core/axis.ts` is a private runtime module. Its clamp helper is local:\n  displacement is bigint, each moving coordinate is clamped to `0n..39n` or\n  `0n..19n`, and only then converted to a number. The untouched coordinate is\n  copied, so horizontal moves preserve the row and vertical moves preserve the\n  column.\n- Zero is handled by the same arithmetic; no special case is needed. Huge\n  counts saturate at the edge.\n- Reuse the same clamp-before-conversion rule in words, lines and find so the\n  public bigint natural-count domain is never narrowed through an early\n  `Number(count)`. Lines and find also need clamping on row/index arithmetic.\n- Keep hand-worked expected destinations explicit in separate test files, not\n  only through the contract relations. `tests/core/navigation-axis.test.ts`\n  shows the established style.\n- Do not edit `spec/navigation/*`; the integrity manifest guards api, helpers,\n  checks and obligations. No manifest change was needed.\n- `just contract-complete` remains for unit 6. Do not switch to `registerAll`\n  before then.\n\n**Open problems**\n- None for unit 2.1. `direnv exec . just verify` is green with 27 core tests\n  (14 contract, 5 independent axis, plus the prior model/specification/scene\n  tests) and 2 browser tests. No words, lines, find, input or browser\n  navigation was implemented, by design.",
+      "session_id": "ses_e85f4acfdffepLHevhTuzqkRk6",
+      "cost_usd": 0.010566054,
+      "harness": "opencode",
+      "elapsed_s": 68,
+      "session_s": 65,
+      "verify_s": 3,
+      "tokens": {
+        "input": 24297,
+        "output": 4640,
+        "reasoning": 3820,
+        "cache_read": 615168
+      }
     }
   }
 }
