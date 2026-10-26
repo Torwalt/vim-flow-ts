@@ -100,6 +100,10 @@ export interface Scenario {
   readonly cursor?: Cursor;
   readonly buildings?: readonly BuildingSetup[];
   readonly pendingSource?: SiteId | null;
+  readonly manualPaused?: boolean;
+  readonly suspended?: boolean;
+  readonly elapsedTicks?: number;
+  readonly remainderMs?: number;
 }
 
 declare const worldBrand: unique symbol;
@@ -129,12 +133,18 @@ interface InternalWorld {
   readonly draft: string;
   readonly notice: string;
   readonly navRows: readonly string[] | null;
+  readonly manualPaused: boolean;
+  readonly suspended: boolean;
+  readonly elapsedTicks: number;
+  readonly remainderMs: number;
 }
 
 export type GameEvent =
   | { readonly type: "key"; readonly key: string; readonly blocked?: boolean }
   | { readonly type: "build"; readonly site: SiteId; readonly kind: "well" | "ring" }
   | { readonly type: "link"; readonly source: SiteId; readonly target: SiteId }
+  | { readonly type: "elapsed"; readonly ms: number }
+  | { readonly type: "visibility"; readonly hidden: boolean }
   | { readonly type: "blur" };
 
 const SITE_DEFINITIONS: readonly SiteDefinition[] = [
@@ -154,9 +164,12 @@ const RALLY_OFFSET: Readonly<Record<ImpSlot, number>> = {
 const RALLY_ROW = 6;
 const IMP_SLOTS: readonly ImpSlot[] = [1, 2, 3, 4, 5];
 const INITIAL_CURSOR: Cursor = { x: 13, y: 10 };
-const MAX_WELL_MANA = 2000;
-const MAX_RING_MANA = 1000;
-const MAX_IMPS = 5;
+export const TICK_MS = 100;
+export const WELL_GENERATION = 20;
+export const WELL_MANA_CAP = 2000;
+export const RING_MANA_CAP = 1000;
+export const SUMMON_COST = 1000;
+export const IMP_CAP = 5;
 const worldSize = WORLD_WIDTH * WORLD_HEIGHT;
 const navigation = createNavigation({ columns: WORLD_WIDTH, rows: WORLD_HEIGHT });
 
@@ -216,6 +229,18 @@ function integer(value: unknown, label: string, min: number, max: number): numbe
   return value;
 }
 
+function safeInteger(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    fail(`${label} must be a nonnegative safe integer`);
+  }
+  return value;
+}
+
+function boolean(value: unknown, label: string): boolean {
+  if (typeof value !== "boolean") fail(`${label} must be a boolean`);
+  return value;
+}
+
 function isSiteId(value: unknown): value is SiteId {
   return typeof value === "string" && (SITE_IDS as readonly string[]).includes(value);
 }
@@ -262,7 +287,7 @@ function buildingSetup(value: unknown, index: number): { site: SiteId; building:
   if (!isRecord(value)) fail(`buildings[${index}] must be an object`);
   const site = siteId(value.site, `buildings[${index}].site`);
   if (value.kind !== "well" && value.kind !== "ring") fail(`buildings[${index}].kind must be well or ring`);
-  const mana = integer(value.mana ?? 0, `buildings[${index}].mana`, 0, value.kind === "well" ? MAX_WELL_MANA : MAX_RING_MANA);
+  const mana = integer(value.mana ?? 0, `buildings[${index}].mana`, 0, value.kind === "well" ? WELL_MANA_CAP : RING_MANA_CAP);
   if (value.kind === "well") {
     if (value.produced !== undefined) fail(`buildings[${index}] is a well and cannot have produced`);
     const link = value.link ?? null;
@@ -272,14 +297,17 @@ function buildingSetup(value: unknown, index: number): { site: SiteId; building:
   if (value.link !== undefined && value.link !== null) fail(`buildings[${index}] is a ring and cannot have a link`);
   return {
     site,
-    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, MAX_IMPS) },
+    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, IMP_CAP) },
   };
 }
 
 function parseScenario(spec: unknown): InternalWorld {
   if (spec === undefined) spec = {};
   if (!isRecord(spec)) fail("scenario must be an object");
-  const allowed = new Set(["navigationOnly", "rows", "cursor", "buildings", "pendingSource"]);
+  const allowed = new Set([
+    "navigationOnly", "rows", "cursor", "buildings", "pendingSource",
+    "manualPaused", "suspended", "elapsedTicks", "remainderMs",
+  ]);
   for (const key of Object.keys(spec)) if (!allowed.has(key)) fail(`unknown scenario field ${key}`);
   if (spec.navigationOnly !== undefined && typeof spec.navigationOnly !== "boolean") fail("navigationOnly must be boolean");
   const navigationOnly = spec.navigationOnly === true;
@@ -309,6 +337,10 @@ function parseScenario(spec: unknown): InternalWorld {
     const source = buildings.get(pendingSource);
     if (!source || source.kind !== "well") fail(`pendingSource ${pendingSource} must name a built well`);
   }
+  const manualPaused = spec.manualPaused === undefined ? false : boolean(spec.manualPaused, "manualPaused");
+  const suspended = spec.suspended === undefined ? false : boolean(spec.suspended, "suspended");
+  const elapsedTicks = spec.elapsedTicks === undefined ? 0 : safeInteger(spec.elapsedTicks, "elapsedTicks");
+  const remainderMs = spec.remainderMs === undefined ? 0 : integer(spec.remainderMs, "remainderMs", 0, 99);
   return {
     navigationOnly,
     cursor: position,
@@ -321,6 +353,10 @@ function parseScenario(spec: unknown): InternalWorld {
     draft: "",
     notice: "",
     navRows,
+    manualPaused,
+    suspended,
+    elapsedTicks,
+    remainderMs,
   };
 }
 
@@ -419,7 +455,12 @@ export function snapshot(world: World): Scenario {
     for (const [y, row] of (state.navRows ?? []).entries()) {
       if (row.trim() !== "") rows[String(y)] = row;
     }
-    return { navigationOnly: true, cursor: { ...state.cursor }, rows };
+    return {
+      navigationOnly: true,
+      cursor: { ...state.cursor },
+      rows,
+      ...clockSetup(state),
+    };
   }
   const buildings: BuildingSetup[] = [];
   for (const site of SITE_DEFINITIONS) {
@@ -433,6 +474,16 @@ export function snapshot(world: World): Scenario {
     cursor: { ...state.cursor },
     buildings,
     ...(state.pendingSource === null ? {} : { pendingSource: state.pendingSource }),
+    ...clockSetup(state),
+  };
+}
+
+function clockSetup(state: InternalWorld): Pick<Scenario, "manualPaused" | "suspended" | "elapsedTicks" | "remainderMs"> {
+  return {
+    manualPaused: state.manualPaused,
+    suspended: state.suspended,
+    elapsedTicks: state.elapsedTicks,
+    remainderMs: state.remainderMs,
   };
 }
 
@@ -457,6 +508,66 @@ export function link(world: World, source: SiteId, target: SiteId): World {
   const buildings = new Map(state.buildings);
   buildings.set(source, { ...well, link: target });
   return construct({ ...state, buildings });
+}
+
+function generate(buildings: Map<SiteId, Building>): void {
+  for (const site of SITE_DEFINITIONS) {
+    const building = buildings.get(site.id);
+    if (building?.kind !== "well") continue;
+    buildings.set(site.id, { ...building, mana: Math.min(WELL_MANA_CAP, building.mana + WELL_GENERATION) });
+  }
+}
+
+function transfer(buildings: Map<SiteId, Building>): void {
+  for (const site of SITE_DEFINITIONS) {
+    const well = buildings.get(site.id);
+    if (well?.kind !== "well" || well.link === null) continue;
+    const target = well.link;
+    const ring = buildings.get(target);
+    if (ring?.kind !== "ring") continue;
+    const amount = Math.min(well.mana, RING_MANA_CAP - ring.mana);
+    if (amount === 0) continue;
+    buildings.set(site.id, { ...well, mana: well.mana - amount });
+    buildings.set(target, { ...ring, mana: ring.mana + amount });
+  }
+}
+
+function summon(buildings: Map<SiteId, Building>): void {
+  for (const site of SITE_DEFINITIONS) {
+    const ring = buildings.get(site.id);
+    if (ring?.kind !== "ring") continue;
+    if (ring.produced >= IMP_CAP || ring.mana < SUMMON_COST) continue;
+    buildings.set(site.id, { ...ring, mana: ring.mana - SUMMON_COST, produced: ring.produced + 1 });
+  }
+}
+
+function tick(buildings: Map<SiteId, Building>): void {
+  generate(buildings);
+  transfer(buildings);
+  summon(buildings);
+}
+
+export function advance(world: World, milliseconds: number): World {
+  const state = data(world);
+  const elapsedMs = safeInteger(milliseconds, "elapsed ms");
+  if (state.manualPaused || state.suspended) return world;
+  const total = BigInt(state.remainderMs) + BigInt(elapsedMs);
+  const ticks = total / BigInt(TICK_MS);
+  const remainderMs = Number(total % BigInt(TICK_MS));
+  if (ticks === 0n) {
+    if (remainderMs === state.remainderMs) return world;
+    return construct({ ...state, remainderMs });
+  }
+  const elapsedTicks = BigInt(state.elapsedTicks) + ticks;
+  if (elapsedTicks > BigInt(Number.MAX_SAFE_INTEGER)) fail("elapsed ticks exceed the safe integer domain");
+  const buildings = new Map(state.buildings);
+  for (let index = 0n; index < ticks; index++) tick(buildings);
+  return construct({
+    ...state,
+    buildings,
+    elapsedTicks: Number(elapsedTicks),
+    remainderMs,
+  });
 }
 
 function leaderStep(world: World, state: InternalWorld, key: string): World {
@@ -622,22 +733,33 @@ function insertStep(world: World, state: InternalWorld, key: string): World {
   return construct({ ...state, draft: state.draft + key });
 }
 
+function cancelInteraction(state: InternalWorld): InternalWorld {
+  return {
+    ...state,
+    mode: normalMode(),
+    pendingSource: null,
+    menuSelection: null,
+    buildTarget: null,
+    insertSite: null,
+    draft: "",
+    notice: "",
+  };
+}
+
 export function dispatch(world: World, event: GameEvent): World {
   const state = data(world);
-  if (event.type === "blur") {
-    return construct({
-      ...state,
-      mode: normalMode(),
-      pendingSource: null,
-      menuSelection: null,
-      buildTarget: null,
-      insertSite: null,
-      draft: "",
-      notice: "",
-    });
-  }
+  if (event.type === "blur") return construct(cancelInteraction(state));
   if (event.type === "build") return build(world, event.site, event.kind);
   if (event.type === "link") return link(world, event.source, event.target);
+  if (event.type === "elapsed") return advance(world, event.ms);
+  if (event.type === "visibility") {
+    if (typeof event.hidden !== "boolean") throw new Error("Unsupported game event.");
+    return construct({
+      ...(event.hidden ? cancelInteraction(state) : state),
+      suspended: event.hidden,
+      remainderMs: 0,
+    });
+  }
   if (event.type !== "key") throw new Error("Unsupported game event.");
   if (event.blocked === true) return world;
   if (state.mode.$ === "Insert") return insertStep(world, state, event.key);
@@ -655,6 +777,16 @@ export function dispatch(world: World, event: GameEvent): World {
   }
   if (state.mode.$ === "Leader") return leaderStep(world, state, event.key);
   if (state.mode.$ === "Build") return buildStep(world, state, event.key);
+  if (state.mode.$ === "Normal" && event.key === "p") {
+    const manualPaused = !state.manualPaused;
+    return construct({
+      ...state,
+      mode: normalMode(),
+      manualPaused,
+      remainderMs: 0,
+      notice: manualPaused ? "Paused" : "Running",
+    });
+  }
   if (state.mode.$ === "Normal" && event.key === " ") {
     return construct({
       ...state,
@@ -739,10 +871,10 @@ export function observe(world: World): Observation {
     pendingFrom,
     notice: state.notice,
     commandBuffer: state.draft,
-    manualPaused: false,
-    suspended: false,
-    elapsedTicks: 0,
-    remainderMs: 0,
+    manualPaused: state.manualPaused,
+    suspended: state.suspended,
+    elapsedTicks: state.elapsedTicks,
+    remainderMs: state.remainderMs,
     siteCount: state.navigationOnly ? 0 : SITE_DEFINITIONS.length,
     buildingCount,
     impCount,

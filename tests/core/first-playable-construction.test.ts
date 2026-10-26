@@ -111,7 +111,7 @@ test("coverage activates B1, B2 and I1 with every construction case and leaves l
   }
   expect(coverage.requirements.B1?.exports).toContain("game.preview");
   expect(coverage.requirements.B2?.exports).toContain("game.build");
-  for (const id of ["V2", "E1", "E2", "E3", "E4", "T1", "T2"]) {
+  for (const id of ["V2"]) {
     expect(coverage.requirements[id]?.status).toBe("pending");
   }
 });

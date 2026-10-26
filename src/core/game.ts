@@ -1,4 +1,4 @@
-import { build, dispatch, field, glyphAt, imps, initial, link, observe, preview, scenario, siteAt, snapshot } from "./world";
+import { advance, build, dispatch, field, glyphAt, imps, initial, link, observe, preview, scenario, siteAt, snapshot } from "./world";
 
 export type {
   Building,
@@ -20,9 +20,15 @@ export type {
   World,
 } from "./world";
 export {
+  IMP_CAP,
+  RING_MANA_CAP,
   SITE_HEIGHT,
   SITE_IDS,
   SITE_WIDTH,
+  SUMMON_COST,
+  TICK_MS,
+  WELL_GENERATION,
+  WELL_MANA_CAP,
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./world";
@@ -35,6 +41,7 @@ export const game = {
   dispatch,
   build,
   link,
+  advance,
   preview,
   siteAt,
   glyphAt,

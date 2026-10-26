@@ -32,8 +32,10 @@ opens the targeted-site Build menu: `w`/`r` choose a well or ring, Enter builds
 it for free, Escape cancels and the core glyphs preview the choice. At a built
 site, `i` opens a 32-character command buffer: exact `connect` plus Escape or
 Enter stages a well, and Enter at a ring commits a persistent directed arrow
-from the well; ring Escape retries and Normal Escape or blur cancels. There are
-no economy ticks, imps or objective yet. The execution plan runs under OpenCode /
+from the well; ring Escape retries and Normal Escape or blur cancels. The pure
+core now advances linked mana on exact 100 ms ticks and creates up to five
+ordered stationary imps per ring, with manual pause and hidden suspension;
+browser live scheduling is the next unit. The execution plan runs under OpenCode /
 `deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
 measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).
@@ -51,6 +53,6 @@ On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
 
 The shared [first-playable game authority](docs/first-playable.md) and
 [Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are active. The
-full-window 240×160 world, camera, free keyboard construction and typed directed
-connections are in place; linked mana, stationary imps and simulation time
-remain planned for later units.
+full-window 240×160 world, camera, free keyboard construction, typed directed
+connections, linked mana, stationary imps and the pure elapsed clock are in
+place; browser live scheduling and the complete rendering loop remain planned.
