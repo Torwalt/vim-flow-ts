@@ -95,6 +95,34 @@ test("a count repeats the actual single step without changing a fallback", () =>
   }
 });
 
+test("all six word motions at counts 1, 99 and 9999 reach recorded final positions", () => {
+  const field = model.view(model.initial()).field;
+  const start = 46;
+  const counts = [1n, 99n, 9999n];
+  const expected = new Map<string, number[]>([
+    ["w", [47, 799, 799]],
+    ["b", [42, 0, 0]],
+    ["e", [47, 799, 799]],
+    ["W", [58, 799, 799]],
+    ["B", [42, 0, 0]],
+    ["E", [55, 799, 799]],
+  ]);
+  const motions = new Map<string, [WordMotion, boolean]>([
+    ["w", ["forward", false]],
+    ["b", ["backward", false]],
+    ["e", ["end", false]],
+    ["W", ["forward", true]],
+    ["B", ["backward", true]],
+    ["E", ["end", true]],
+  ]);
+  for (const [key, [motion, big]] of motions) {
+    const destinations = expected.get(key)!;
+    counts.forEach((count, index) => {
+      expect(words.wordMove(field, start, motion, big, count)).toBe(destinations[index]!);
+    });
+  }
+});
+
 test("huge counts terminate at the same boundary as smaller overflowing counts", () => {
   const huge = [BigInt(Number.MAX_SAFE_INTEGER) + 1n, 2n ** 64n, 10n ** 30n];
   const wordsField = model.field("one two three");

@@ -14,6 +14,7 @@ just dev
 Open http://localhost:3000 and click the field. `just verify` checks contract
 integrity, all 50 named navigation obligations, TypeScript, core behavior and
 development/production Chromium. `just check-nix` checks the Nix static build.
+`just timing` records production browser dispatch timings in `artifacts/`.
 `nix build` produces the static site. `just preview` serves `dist/` on port 4173.
 
 The flake retains the sibling's locked Bun, TypeScript, agent harnesses, Ploopy,

@@ -25,6 +25,9 @@ build:
 test-browser: build
     bun run test:browser
 
+timing: build
+    bun tools/experiments/first-playable-timing.ts
+
 preview: build
     bun run preview
 

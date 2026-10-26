@@ -170,12 +170,56 @@ test("blocked modifier chords leave a pending count unchanged", async ({ page })
   await expectView(page, 80, "Normal", 0);
 });
 
-test("blur cancels a pending prefix and keeps the cursor", async ({ page }) => {
+test("blur cancels pending count, find and go prefixes without moving", async ({ page }) => {
   await open(page);
+  await page.keyboard.press("2");
+  await expectView(page, 0, "Normal", 2);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expectView(page, 0, "Normal", 0);
+
+  await page.keyboard.press("2");
+  await page.keyboard.press("f");
+  await expectView(page, 0, "FindRight", 2);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expectView(page, 0, "Normal", 0);
+
+  await page.keyboard.press("2");
+  await page.keyboard.press("F");
+  await expectView(page, 0, "FindLeft", 2);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expectView(page, 0, "Normal", 0);
+
   await page.keyboard.press("2");
   await page.keyboard.press("g");
   await expectView(page, 0, "Go", 2);
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expectView(page, 0, "Normal", 0);
+});
+
+test("blocked modified keys and Other input leave a pending find unchanged", async ({ page }) => {
+  await open(page);
+  await page.keyboard.press("2");
+  await page.keyboard.press("f");
+  await expectView(page, 0, "FindRight", 2);
+
+  await page.keyboard.down("Control");
+  await page.keyboard.press("Escape");
+  await page.keyboard.up("Control");
+  await expectView(page, 0, "FindRight", 2);
+
+  for (const key of ["Backspace", "Enter"]) {
+    await page.locator("#world").evaluate((element, value) => {
+      element.dispatchEvent(new KeyboardEvent("keydown", { key: value, bubbles: true, cancelable: true, ctrlKey: true }));
+    }, key);
+    await expectView(page, 0, "FindRight", 2);
+  }
+
+  await page.locator("#world").evaluate((element) => {
+    element.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", bubbles: true, cancelable: true }));
+  });
+  await expectView(page, 0, "FindRight", 2);
+
+  await page.keyboard.press("x");
   await expectView(page, 0, "Normal", 0);
 });
 
