@@ -23,11 +23,14 @@ included. `.env` is local and ignored; on this host it links to the sibling's
 existing environment. Agent authentication stays in existing user settings.
 
 Navigation is **implemented and playable**: `h j k l`, `w b e W B E`, `0 ^ $`,
-`gg G`, counted motion and `f F` move a visible cursor over the seeded 40×20
-field. Pending counts and find/go prefixes appear in the status line; Escape and
-browser blur cancel them. There is no editing, time or objective yet. The
-seven-unit plan ran under OpenCode / `deepseek/deepseek-flash`, high effort, with
-no secondary or rescue; evidence and measurements are in
+`gg G`, counted motion and `f F` move a visible cursor over the 240×160 world.
+The game fills the window with a 32px HUD, 12×20 cells, device-pixel-ratio
+backing and an integer-cell camera; pending counts and find/go prefixes appear
+in the HUD, and Escape or browser blur cancel them. The original 40×20
+navigation contract remains checked as a compatibility fixture. There is no
+construction, time or objective yet. The execution plan runs under OpenCode /
+`deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
+measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).
 
 See [comparison protocol](../notes/zettelkasten/vim-game-bend-comparison-protocol.md),
@@ -42,6 +45,6 @@ On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
 ## Next implementation
 
 The shared [first-playable game authority](docs/first-playable.md) and
-[Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are prepared.
-They add a full-window ASCII RTS economy with construction, linked mana and
-five stationary imps per ring. These features are planned, not implemented yet.
+[Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are active. The
+full-window 240×160 world and camera are in place; construction, linked mana,
+stationary imps, menus and simulation time remain planned for later units.

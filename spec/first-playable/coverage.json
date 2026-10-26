@@ -3,7 +3,8 @@
   "corpus": "spec/first-playable",
   "notes": [
     "N1/N2 use a 240x160 generalized navigation engine in src/core/game-navigation.ts behind game.dispatch; spec/navigation and the original 40x20 exports/tests are unchanged.",
-    "Navigation states are constructed and driven through game.scenario and game.dispatch, not private state casts."
+    "Navigation states are constructed and driven through game.scenario and game.dispatch, not private state casts.",
+    "V1 uses the pure 12x20 presentation camera in src/web/camera.ts; browser tests check DPR backing, visible cells, clamping and resize against the real core state."
   ],
   "requirements": {
     "W1": {
@@ -69,7 +70,26 @@
       "tests": ["tests/core/first-playable-navigation.test.ts"],
       "cases": ["nav.huge-horizontal", "nav.huge-vertical", "nav.blur-clears-find"]
     },
-    "V1": { "status": "pending", "unit": "3.1", "cases": [] },
+    "V1": {
+      "status": "active",
+      "unit": "3.1",
+      "exports": [
+        "web.camera.visibleCells",
+        "web.camera.followCamera",
+        "web.camera.CELL_WIDTH",
+        "web.camera.CELL_HEIGHT"
+      ],
+      "tests": [
+        "tests/core/first-playable-camera.test.ts",
+        "tests/browser/viewport.spec.ts",
+        "tests/browser/navigation.spec.ts"
+      ],
+      "cases": [
+        "camera.bottom-right",
+        "camera.follow-threshold",
+        "camera.oversized"
+      ]
+    },
     "V2": { "status": "pending", "unit": "7.1", "cases": [] },
     "B1": { "status": "pending", "unit": "4.1", "cases": [] },
     "B2": { "status": "pending", "unit": "4.1", "cases": [] },

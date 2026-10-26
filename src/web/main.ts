@@ -1,14 +1,27 @@
-import { actualApi, type Field, type Input, type Mode, type View } from "../core/navigation";
+import {
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  game,
+  type GameEvent,
+  type Observation,
+  type World,
+} from "../core/game";
+import {
+  CELL_HEIGHT,
+  CELL_WIDTH,
+  followCamera,
+  visibleCells,
+  type Camera,
+  type Viewport,
+} from "./camera";
 
-const columns = 40;
-const rows = 20;
-const cellWidth = 20;
-const cellHeight = 24;
-const fieldWidth = columns * cellWidth;
-const fieldHeight = rows * cellHeight;
-const cursorColor = "#f5c451";
-const cursorGlyphColor = "#111714";
-const fieldGlyphColor = "#d9ddcb";
+const colors = {
+  background: "#111714",
+  field: "#d9ddcb",
+  imp: "#f5c451",
+  cursor: "#f5c451",
+  cursorGlyph: "#111714",
+};
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -22,70 +35,154 @@ function context2d(element: HTMLCanvasElement): CanvasRenderingContext2D {
   return context;
 }
 
-const canvas = required<HTMLCanvasElement>("#world");
-const context = context2d(canvas);
-const statusMode = document.querySelector<HTMLElement>("#status-mode");
-const statusPosition = document.querySelector<HTMLElement>("#status-position");
-
-let state = actualApi.initial();
-let composing = false;
-
-function modeLabel(mode: Mode): string {
-  switch (mode.$) {
-    case "Normal":
-      return mode.count === 0 ? "NORMAL" : `NORMAL · COUNT ${mode.count}`;
-    case "FindRight":
-      return `FIND RIGHT · ${mode.count}`;
-    case "FindLeft":
-      return `FIND LEFT · ${mode.count}`;
-    case "Go":
-      return mode.count === 0 ? "GO" : `GO · COUNT ${mode.count}`;
-  }
+function setText(element: HTMLElement | null, value: string): void {
+  if (element) element.textContent = value;
 }
 
-function draw(view: View<Field>): void {
+const canvas = required<HTMLCanvasElement>("#world");
+const context = context2d(canvas);
+const hudSite = document.querySelector<HTMLElement>("#hud-site");
+const hudResources = document.querySelector<HTMLElement>("#hud-resources");
+const hudMode = document.querySelector<HTMLElement>("#hud-mode");
+const hudCursor = document.querySelector<HTMLElement>("#hud-cursor");
+const hudSource = document.querySelector<HTMLElement>("#hud-source");
+const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
+const hudClock = document.querySelector<HTMLElement>("#hud-clock");
+
+let state: World = game.initial();
+let camera: Camera = { x: 0, y: 0 };
+let viewport: Viewport = { columns: 1, rows: 1 };
+let composing = false;
+
+function describeSite(observation: Observation): { label: string; resources: string } {
+  const id = observation.siteAtCursor;
+  if (id === null) return { label: "no site", resources: "" };
+  const site = observation.sites[id];
+  if (!site) return { label: `${id} empty`, resources: "" };
+  if (site.kind === "empty") return { label: `${id} EMPTY`, resources: "" };
+  if (site.kind === "well") {
+    return {
+      label: `${id} WELL`,
+      resources: `mana ${site.mana}q · out ${site.link ?? "—"}`,
+    };
+  }
+  return {
+    label: `${id} RING`,
+    resources: `mana ${site.mana}q · ${site.produced}/5 · in ${incoming(observation, id)}`,
+  };
+}
+
+function incoming(observation: Observation, ring: string): string {
+  const sources: string[] = [];
+  for (const [id, site] of Object.entries(observation.sites)) {
+    if (site?.kind === "well" && site.link === ring) sources.push(id);
+  }
+  return sources.length === 0 ? "—" : sources.sort().join(",");
+}
+
+function modeLabel(observation: Observation): string {
+  return observation.count === 0
+    ? observation.mode.toUpperCase()
+    : `${observation.mode.toUpperCase()} ${observation.count}`;
+}
+
+function clockLabel(observation: Observation): string {
+  const status = observation.manualPaused
+    ? "paused"
+    : observation.suspended ? "hidden" : "running";
+  return `${(observation.elapsedTicks / 10).toFixed(1)}s · ${status}`;
+}
+
+function drawCell(glyph: string, column: number, row: number, color: string): void {
+  const x = column * CELL_WIDTH + CELL_WIDTH / 2;
+  const y = row * CELL_HEIGHT + CELL_HEIGHT / 2;
+  context.fillStyle = color;
+  context.fillText(glyph, x, y);
+}
+
+function render(): void {
+  const observation = game.observe(state);
+  const bounds = canvas.getBoundingClientRect();
+  const cssWidth = Math.max(0, bounds.width);
+  const cssHeight = Math.max(0, bounds.height);
   const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(fieldWidth * ratio);
-  canvas.height = Math.round(fieldHeight * ratio);
+  const backingWidth = Math.max(1, Math.round(cssWidth * ratio));
+  const backingHeight = Math.max(1, Math.round(cssHeight * ratio));
+  if (canvas.width !== backingWidth) canvas.width = backingWidth;
+  if (canvas.height !== backingHeight) canvas.height = backingHeight;
+
+  viewport = visibleCells(cssWidth, cssHeight);
+  camera = followCamera(camera, observation.cursor, viewport, {
+    width: WORLD_WIDTH,
+    height: WORLD_HEIGHT,
+  });
+
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.fillStyle = "#111714";
-  context.fillRect(0, 0, fieldWidth, fieldHeight);
+  context.fillStyle = colors.background;
+  context.fillRect(0, 0, cssWidth, cssHeight);
   context.font = '15px "SFMono-Regular", Consolas, "Liberation Mono", monospace';
   context.textAlign = "center";
   context.textBaseline = "middle";
 
-  const text = actualApi.contents(view.field);
-  context.fillStyle = fieldGlyphColor;
-  for (let position = 0; position < text.length; position++) {
-    const glyph = text[position] ?? " ";
-    if (glyph === " ") continue;
-    const x = (position % columns) * cellWidth + cellWidth / 2;
-    const y = Math.floor(position / columns) * cellHeight + cellHeight / 2;
-    context.fillText(glyph, x, y);
+  const text = game.field(state).text;
+  const { x: cursorX, y: cursorY } = observation.cursor;
+  for (let row = 0; row < viewport.rows; row++) {
+    const worldRow = camera.y + row;
+    if (worldRow >= WORLD_HEIGHT) break;
+    for (let column = 0; column < viewport.columns; column++) {
+      const worldColumn = camera.x + column;
+      if (worldColumn >= WORLD_WIDTH) break;
+      if (worldColumn === cursorX && worldRow === cursorY) continue;
+      const glyph = text[worldRow * WORLD_WIDTH + worldColumn] ?? " ";
+      if (glyph === " ") continue;
+      drawCell(glyph, column, row, glyph === "i" ? colors.imp : colors.field);
+    }
   }
 
-  const column = view.position % columns;
-  const row = Math.floor(view.position / columns);
-  const x = column * cellWidth;
-  const y = row * cellHeight;
-  context.fillStyle = cursorColor;
-  context.fillRect(x, y, cellWidth, cellHeight);
-  context.fillStyle = cursorGlyphColor;
-  context.fillText(text[view.position] ?? " ", x + cellWidth / 2, y + cellHeight / 2);
+  const cursorColumn = cursorX - camera.x;
+  const cursorRow = cursorY - camera.y;
+  if (cursorColumn >= 0 && cursorColumn < viewport.columns && cursorRow >= 0 && cursorRow < viewport.rows) {
+    context.fillStyle = colors.cursor;
+    context.fillRect(cursorColumn * CELL_WIDTH, cursorRow * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT);
+    drawCell(text[cursorY * WORLD_WIDTH + cursorX] ?? " ", cursorColumn, cursorRow, colors.cursorGlyph);
+  }
 
+  const site = describeSite(observation);
+  setText(hudSite, site.label);
+  setText(hudResources, site.resources);
+  setText(hudMode, modeLabel(observation));
+  setText(hudCursor, `${cursorX},${cursorY} · ${camera.x},${camera.y}`);
+  setText(hudSource, `source ${observation.pendingSource ?? "—"}`);
+  setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
+  setText(hudClock, clockLabel(observation));
+
+  canvas.dataset.cursorX = String(cursorX);
+  canvas.dataset.cursorY = String(cursorY);
+  canvas.dataset.position = String(cursorY * WORLD_WIDTH + cursorX);
+  canvas.dataset.row = String(cursorY);
+  canvas.dataset.column = String(cursorX);
+  canvas.dataset.mode = observation.mode;
+  canvas.dataset.count = String(observation.count);
+  canvas.dataset.cameraX = String(camera.x);
+  canvas.dataset.cameraY = String(camera.y);
+  canvas.dataset.columns = String(viewport.columns);
+  canvas.dataset.rows = String(viewport.rows);
+  canvas.dataset.cellWidth = String(CELL_WIDTH);
+  canvas.dataset.cellHeight = String(CELL_HEIGHT);
+  canvas.dataset.dpr = String(ratio);
+  canvas.dataset.siteAtCursor = observation.siteAtCursor ?? "";
+  canvas.dataset.pendingSource = observation.pendingSource ?? "";
+  canvas.dataset.commandBuffer = observation.commandBuffer;
+  canvas.dataset.manualPaused = String(observation.manualPaused);
+  canvas.dataset.suspended = String(observation.suspended);
+  canvas.dataset.elapsedTicks = String(observation.elapsedTicks);
+  canvas.dataset.remainderMs = String(observation.remainderMs);
   canvas.dataset.ready = "true";
-  canvas.dataset.position = String(view.position);
-  canvas.dataset.mode = view.mode.$;
-  canvas.dataset.count = String(view.mode.count);
-  canvas.dataset.row = String(row);
-  canvas.dataset.column = String(column);
-  if (statusMode) statusMode.textContent = modeLabel(view.mode);
-  if (statusPosition) statusPosition.textContent = `row ${row} col ${column} · ${view.position}`;
 }
 
-function apply(input: Input): void {
-  state = actualApi.step(state, input);
-  draw(actualApi.view(state));
+function apply(event: GameEvent): void {
+  state = game.dispatch(state, event);
+  render();
 }
 
 function chord(event: KeyboardEvent): boolean {
@@ -96,34 +193,38 @@ function singleCodePoint(value: string): boolean {
   return Array.from(value).length === 1;
 }
 
-function toInput(event: KeyboardEvent): Input {
-  if (event.key === "Escape") return { $: "Escape", blocked: chord(event) };
-  if (chord(event)) {
-    return singleCodePoint(event.key)
-      ? { $: "Character", value: event.key, blocked: true }
-      : { $: "Other" };
-  }
-  return singleCodePoint(event.key)
-    ? { $: "Character", value: event.key, blocked: false }
-    : { $: "Other" };
-}
-
 canvas.addEventListener("keydown", (event) => {
   if (composing || event.isComposing) return;
   if (!chord(event) && (event.key === "Escape" || singleCodePoint(event.key))) event.preventDefault();
-  apply(toInput(event));
+  apply({ type: "key", key: event.key, blocked: chord(event) });
 });
-canvas.addEventListener("compositionstart", () => { composing = true; });
-canvas.addEventListener("compositionend", () => { composing = false; });
-canvas.addEventListener("pointerdown", () => { canvas.focus(); });
 
-function cancelPending(): void {
+canvas.addEventListener("compositionstart", () => {
+  composing = true;
+});
+
+canvas.addEventListener("compositionend", (event) => {
   composing = false;
-  apply({ $: "Escape", blocked: false });
-}
-canvas.addEventListener("blur", cancelPending);
-window.addEventListener("blur", cancelPending);
-window.addEventListener("resize", () => { draw(actualApi.view(state)); });
+  apply({ type: "key", key: event.data });
+});
 
-draw(actualApi.view(state));
+canvas.addEventListener("pointerdown", () => {
+  canvas.focus();
+});
+
+function cancelAll(): void {
+  composing = false;
+  apply({ type: "blur" });
+}
+
+canvas.addEventListener("blur", cancelAll);
+window.addEventListener("blur", cancelAll);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") cancelAll();
+});
+window.addEventListener("resize", render);
+
+new ResizeObserver(() => render()).observe(canvas);
+
+render();
 canvas.focus();

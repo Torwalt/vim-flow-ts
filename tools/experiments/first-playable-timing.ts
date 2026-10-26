@@ -24,7 +24,7 @@ type Result = Command & {
 const runs = 5;
 const warmups = 3;
 const seedStart = 0;
-const findStart = 40;
+const findStart = 240;
 const artifact = resolve(process.argv[2] ?? "artifacts/first-playable-timing-baseline.json");
 const root = resolve("dist");
 

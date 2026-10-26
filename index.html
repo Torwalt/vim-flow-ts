@@ -9,19 +9,21 @@
     <script type="module" src="./src/web/main.ts"></script>
   </head>
   <body>
-    <main>
-      <header>
-        <p class="eyebrow">VIM-FLOW / 001</p>
-        <h1>A place for your muscle memory.</h1>
-        <p class="intro">A free game for people who miss moving at the speed of thought.</p>
-        <p class="intro">Click the field, then navigate with h j k l, w b e, 0 ^ $ gg G and f F.</p>
-      </header>
-      <section class="viewport" aria-label="Game viewport">
-        <div class="tabline"><span>world</span><span>40 × 20</span></div>
-        <canvas id="world" tabindex="0" aria-label="A seeded glyph field with a navigation cursor"></canvas>
-        <div class="statusline"><span id="status-mode">NORMAL</span><span id="status-position">row 0 col 0 · 0</span></div>
-      </section>
-      <footer><span>TypeScript × Bun</span><span>Navigation only: no editing, time or objective.</span></footer>
+    <main id="game">
+      <canvas
+        id="world"
+        tabindex="0"
+        aria-label="A full-window ASCII world with a navigation cursor"
+      ></canvas>
+      <aside id="hud" aria-label="Game status">
+        <span id="hud-site" class="hud-site">no site</span>
+        <span id="hud-resources" class="hud-resources"></span>
+        <span id="hud-mode" class="hud-mode">NORMAL</span>
+        <span id="hud-cursor" class="hud-cursor">13,10 · 0,0</span>
+        <span id="hud-source" class="hud-source">source —</span>
+        <span id="hud-draft" class="hud-draft">draft —</span>
+        <span id="hud-clock" class="hud-clock">0.0s · running</span>
+      </aside>
     </main>
   </body>
 </html>

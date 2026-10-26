@@ -17,9 +17,9 @@ planner-selected defaults; the [execution plan](../plans/FIRST_PLAYABLE_EXECUTIO
 owns implementation. The first unit records baseline repairs/checks separately.
 Bend authors/proves laws per core unit; TypeScript authors tests for the same
 requirements. Both use the identical frozen 53-case corpus and 18 property IDs
-under `spec/first-playable/`. Units 2.1 and 2.2 landed the core
-world/site/observation facade and 240x160 navigation; `coverage.json` activates
-W1/W2/N1/N2 and marks later work pending.
+under `spec/first-playable/`. Units 2.1, 2.2 and 3.1 landed the core
+world/site/observation facade, 240x160 navigation and the full-window camera;
+`coverage.json` activates W1/W2/N1/N2/V1 and marks later work pending.
 
 **Notes:** [Project and experiment index](../../../notes/zettelkasten/vim-game-bend-main.md).
 Do not reorder NEXT or inspect the sibling's new implementation during execution.
