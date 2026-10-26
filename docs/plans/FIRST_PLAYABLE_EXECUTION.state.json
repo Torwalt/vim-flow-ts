@@ -124,6 +124,31 @@
         "reasoning": 22645,
         "cache_read": 7499776
       }
+    },
+    "5.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T00:15:24+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "c845198bcb13b2fdbf695ed502238f06c6e79b88",
+      "commits": [
+        "35320d9a1c9331747bef43eff91c3f81082c11d1 Link wells to rings through typed connect commands"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 5.1\n\n**What landed**\n- `35320d9` — bounded Insert drafts, exact `connect`, well staging by Escape/Enter, ring commit, retry and Normal/blur cancellation. One pure `game.link` transition backs direct events and keyboard commits.\n- Observation now derives `links` (source/target/endpoint cells), `insertSite`, `pendingFrom` and the live `commandBuffer`; the field text remains untouched by typing and links.\n- Browser draws clipped directed arrows behind glyphs, highlights incident links, outlines the staged source and draws a dashed preview line to the cursor; HUD names the source and Insert draft.\n- Activated I2/L1/L2 with all 10 connections.json cases plus independent Insert, linking, reroute, crossing, clipping and browser checks. Coverage documents later E1–E4/T1/T2/V2 as pending.\n\n**Checks**\n- `direnv exec . just verify`: green (fixtures 53/18, 50 named navigation checks, typecheck, 180 core tests, 58 browser tests across development+production, benchpress historical-link warning only).\n- `direnv exec . just test`: green, 180 pass.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort. No usage/cost metrics were available; none invented.\n\n**Landmark drift**\n- No named landmark moved. New files are `src/web/overlay.ts` (pure segment clipping/arrow/cell geometry), `tests/core/first-playable-connections.test.ts` and `tests/browser/connections.spec.ts`.\n- `game.link` and `GameEvent { type: \"link\" }` are the new exported link action/event; `game.build`/`game.preview` are unchanged.\n\n**Deviations from the work order**\n- Added derived `links`, `insertSite` and `pendingFrom` observation fields so rendering never reads private state or recreates site coordinates. Corpus partial matching ignores them.\n- Extracted link clipping and arrowhead geometry into `src/web/overlay.ts`; this makes off-screen clipping and crossing independence directly testable without browser-only seed hooks.\n- Insert mode stores its captured site separately from Build's `buildTarget`; Build behavior is unchanged.\n- Crossing/off-screen link behavior is checked by core topology plus pure overlay geometry, with an additional browser off-screen-clipping check; there is no browser scenario-injection hook.\n\n**What the next session must know**\n- `GameMode` is now `Mode | Leader | Build | Insert`; Insert must be dispatched before the global Escape/navigation paths.\n- Insert Escape stages only an exact `connect` at a well; ring Escape always preserves the source and abandons the draft. Ring Enter with no source is an error with no mutation.\n- `link` returns the same world object for invalid endpoints and for repeating the same link. Keyboard success clears `pendingSource`; direct `game.link` preserves mode/source.\n- Link endpoints are live-derived from `SITE_DEFINITIONS` centers, not stored in snapshot/scenario; W1 roundtrips still compare equal because links are derived from buildings.\n- Browser palette additions: link `#5d8c9e`, selected link `#8fd3c0`, source `#d9a05b`; datasets include `links`, `linkCount`, `insertSite`, `sourceHighlight` and `commandBuffer`.\n\n**Open problems**\n- Economy ticks, mana transfer, imps, elapsed/remainder, pause and visibility suspension remain for 6.1/7.1.\n- Insert mode, draft, menu selection and notice are not part of snapshot/scenario; only Normal fixtures roundtrip today.\n- The browser test verifies an off-screen link disappears rather than a segment crossing a partially visible viewport; clipping across viewport edges is covered by overlay geometry tests.",
+      "session_id": "ses_e85855cf8ffeDJli9JzzXCJWtQ",
+      "cost_usd": 0.05483955600000001,
+      "harness": "opencode",
+      "elapsed_s": 306,
+      "session_s": 296,
+      "verify_s": 9,
+      "test_s": 1,
+      "tokens": {
+        "input": 82822,
+        "output": 22367,
+        "reasoning": 24401,
+        "cache_read": 4785152
+      }
     }
   }
 }
