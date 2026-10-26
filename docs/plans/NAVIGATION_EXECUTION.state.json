@@ -72,6 +72,31 @@
         "reasoning": 7086,
         "cache_read": 714880
       }
+    },
+    "4.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:12:33+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "3451c02eebc876aec6ed172816529f8499c0ff95",
+      "commits": [
+        "db10a71a1baefe69d29b3b1cab1141c8ad3575be Add line destination motions"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 4.1\n\n**What landed**\n- `db10a71` — `src/core/lines.ts` implements `LinesApi.lineMove` for\n  `zero`, `indent`, `end`, `first` and `last`; `src/core/navigation.ts`\n  cumulatively exports `lines`, `LinesApi` and `LineMotion`;\n  `tests/core/navigation-contract.test.ts` appends\n  `registerLines({ ...model, ...lines })`; `tests/core/navigation-lines.test.ts`\n  adds independent examples; `docs/experiments/navigation.md` records the\n  unit evidence and row-target notes.\n\n**Landmark drift**\n- None. `targetRow`, `registerLines`, the line motions and the types in\n  `spec/navigation/api.ts` matched the plan.\n\n**Deviations from the work order**\n- None. `lineMove` delegates row selection to the supplied `targetRow` helper\n  and scans each target row for its first non-space, falling back to column\n  zero. Evidence is in the same commit, not a separate evidence commit.\n\n**What the next session must know**\n- `src/core/navigation.ts` is still the stable cumulative entry. Do not remove\n  `model`, `axis`, `words` or `lines` when adding find and input.\n- `targetRow` already encodes every explicit/default rule: `zero`/`indent` keep\n  the current row; `end` offsets by `n - 1` with a minimum of zero; `first` uses\n  `n - 1` (absent count clamps to row 0); `last` maps absent count to row 19 and\n  otherwise uses `n - 1`. Row clamping happens in bigint before conversion, so\n  huge counts including 10^30 saturate.\n- `lineMove` ignores the count for `zero` and `indent`, returns column zero of\n  the target row for `zero`, and column 39 for `end`. `indent`, `first` and\n  `last` all use the same first-non-space/column-zero fallback.\n- The independent examples hand-work a field with a spaced row, a blank row, a\n  leading-space row and a flush-left row, plus an all-nonblank field. Keep that\n  style for find and input.\n- Do not edit `spec/navigation/*`; no manifest change was needed.\n- `just contract-complete` remains for unit 6. Do not switch to `registerAll`.\n\n**Open problems**\n- None for unit 4.1. `direnv exec . just verify` and `direnv exec . just test`\n  are green: contract integrity, typecheck, 49 core tests, 2 browser tests,\n  benchpress lint; the active contract file reports 24 named checks (nine model,\n  five axis, four words plus six lines). No find or input grammar was\n  implemented, by design.",
+      "session_id": "ses_e85f2555cffe0oAHQFxf6NsOPP",
+      "cost_usd": 0.011934474,
+      "harness": "opencode",
+      "elapsed_s": 76,
+      "session_s": 72,
+      "verify_s": 3,
+      "test_s": 1,
+      "tokens": {
+        "input": 22939,
+        "output": 6117,
+        "reasoning": 4224,
+        "cache_read": 763008
+      }
     }
   }
 }
