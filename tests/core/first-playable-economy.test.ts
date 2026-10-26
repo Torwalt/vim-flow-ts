@@ -115,7 +115,8 @@ test("coverage activates E1-E4 and T1-T2 with every economy and clock case", () 
   for (const id of ["E1", "E2", "E3", "E4", "T1", "T2"]) {
     expect(coverage.requirements[id]?.exports).toContain("game.observe");
   }
-  expect(coverage.requirements.V2?.status).toBe("pending");
+  expect(coverage.requirements.V2?.status).toBe("active");
+  expect(coverage.requirements.V2?.cases).toEqual(["browser.complete-loop"]);
 });
 
 function well(mana: number, link: SiteId | null = null): { kind: "well"; mana: number; link: SiteId | null } {

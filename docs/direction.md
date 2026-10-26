@@ -6,11 +6,12 @@ The game is free. Settled direction (2026-10-26): top-down ASCII RTS, real
 text-grid navigation with named sites, construction of mana-wells/rings,
 local mana connections and five stationary, individually positioned imps/ring.
 Construction is free/immediate; visible time continues while typing/using menus.
-The full-window world viewport, free construction and typed directed connections
-are in place; the economy features are planned, not implemented yet.
+The full-window world viewport, free construction, typed directed connections
+and the linked mana/imp economy run with visible monotonic time.
 
-The shared [game authority](first-playable.md) pins behavior and defaults.
-The [planned workbench topic](workbench/first-playable-rts.md) points at the pass.
+The shared [game authority](first-playable.md) pins behavior and defaults; the
+[execution plan](plans/FIRST_PLAYABLE_EXECUTION.md) carries the implementation
+record until Ploopy closes it.
 
 ## What runs now
 
@@ -22,15 +23,16 @@ motions are counted `h j k l`, `w b e W B E`, `0 ^ $`, `gg G` and `f F`; Escape
 and browser blur cancel a stranded prefix. The original 40x20 navigation
 contract remains checked as a compatibility fixture. Space then `f` builds a
 well or ring at a targeted site; at a built site, `i` accepts the exact `connect`
-command to stage a well source and commit a directed arrow at a ring. There is
-still no economy, simulation time or game objective. Bun serves and bundles; Nix
-pins tools; Bun and Chromium check contract, core and development/production
-browser behavior.
+command to stage a well source and commit a directed arrow at a ring. Linked
+wells feed rings on exact 100 ms ticks, rings summon five ordered stationary
+imps, Normal `p` pauses, and hidden tabs suspend without catch-up. The HUD shows
+resources, link endpoints, production, mode and simulation time. Bun serves and
+bundles; Nix pins tools; Bun and Chromium check contract, core and
+development/production browser behavior.
 
-## Next implementation
+## Completion
 
-The [first-playable plan](plans/FIRST_PLAYABLE_EXECUTION.md) is active. Both
-language plans and their identical acceptance corpus were prepared before
-execution; the author starts the runs. World, navigation, the full-window
-viewport, construction and connections are implemented; economy, clock and
-browser completion remain later units.
+The [first-playable plan](plans/FIRST_PLAYABLE_EXECUTION.md) is complete in this
+repository: the full 18-property, 53-case corpus and the original 40×20
+navigation contract pass. `just first-playable-complete` executes the mapped
+core and browser suites and checks the active coverage map.

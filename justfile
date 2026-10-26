@@ -31,7 +31,10 @@ timing: build
 preview: build
     bun run preview
 
-verify: first-playable-fixtures contract contract-complete typecheck test test-browser
+first-playable-complete: first-playable-fixtures test test-browser
+    bun tools/check-first-playable-completion.ts
+
+verify: first-playable-complete contract contract-complete typecheck
     benchpress lint
 
 check-nix:

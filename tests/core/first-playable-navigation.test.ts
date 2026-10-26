@@ -73,7 +73,7 @@ for (const example of cases) {
   });
 }
 
-test("coverage activates N1 and N2 with every navigation case and leaves later work pending", () => {
+test("coverage activates N1 and N2 with every navigation case", () => {
   const n1 = cases.filter(example => example.requires.includes("N1")).map(example => example.id).sort();
   const n2 = cases.filter(example => example.requires.includes("N2")).map(example => example.id).sort();
   expect(n1.length).toBe(9);
@@ -89,10 +89,7 @@ test("coverage activates N1 and N2 with every navigation case and leaves later w
   expect(coverage.requirements.N1?.cases?.slice().sort()).toEqual(n1);
   expect(coverage.requirements.N2?.cases?.slice().sort()).toEqual(n2);
   expect(coverage.requirements.V1?.status).toBe("active");
-  for (const id of ["B1", "B2", "I1"]) expect(coverage.requirements[id]?.status).toBe("active");
-  for (const id of ["V2"]) {
-    expect(coverage.requirements[id]?.status).toBe("pending");
-  }
+  for (const id of ["B1", "B2", "I1", "V2"]) expect(coverage.requirements[id]?.status).toBe("active");
 });
 
 test("N1 axis destinations use the 240x160 bounds and preserve the other coordinate", () => {

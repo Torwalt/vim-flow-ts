@@ -16,6 +16,7 @@ import {
   type Camera,
   type Viewport,
 } from "./camera";
+import { ElapsedClock } from "./clock";
 import { arrowHead, cellCenter, clipSegment } from "./overlay";
 
 const colors = {
@@ -57,6 +58,22 @@ const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
 const hudNotice = document.querySelector<HTMLElement>("#hud-notice");
 const hudClock = document.querySelector<HTMLElement>("#hud-clock");
 
+declare global {
+  interface Window {
+    __vimFlowTest?: {
+      readonly manual: true;
+      now(): number;
+      advance(ms: number): void;
+      load(spec: unknown): void;
+      observe(): Observation;
+      snapshot(): ReturnType<typeof game.snapshot>;
+    };
+  }
+}
+
+const manualClock = new URLSearchParams(window.location.search).get("clock") === "manual";
+let manualNow = 0;
+const clock = new ElapsedClock(manualClock ? 0 : null);
 let state: World = game.initial();
 let camera: Camera = { x: 0, y: 0 };
 let viewport: Viewport = { columns: 1, rows: 1 };
@@ -294,6 +311,46 @@ function apply(event: GameEvent): void {
   render();
 }
 
+function advanceBy(milliseconds: number): void {
+  if (milliseconds <= 0) return;
+  const ticks = game.observe(state).elapsedTicks;
+  const next = game.dispatch(state, { type: "elapsed", ms: milliseconds });
+  if (next === state) return;
+  state = next;
+  if (game.observe(state).elapsedTicks !== ticks) render();
+}
+
+function visible(show: boolean): void {
+  if (!show) composing = false;
+  apply({ type: "visibility", hidden: !show });
+  clock.reset(manualClock ? manualNow : null);
+}
+
+function testAdvance(milliseconds: number): void {
+  if (!Number.isSafeInteger(milliseconds) || milliseconds < 0) {
+    throw new Error("Manual clock advances must be nonnegative safe integers.");
+  }
+  manualNow += milliseconds;
+  advanceBy(clock.consume(manualNow));
+}
+
+function testLoad(spec: unknown): void {
+  state = game.scenario(spec);
+  clock.reset(manualNow);
+  render();
+}
+
+if (manualClock) {
+  window.__vimFlowTest = {
+    manual: true,
+    now: () => manualNow,
+    advance: testAdvance,
+    load: testLoad,
+    observe: () => game.observe(state),
+    snapshot: () => game.snapshot(state),
+  };
+}
+
 function chord(event: KeyboardEvent): boolean {
   return event.ctrlKey || event.altKey || event.metaKey;
 }
@@ -329,11 +386,17 @@ function cancelAll(): void {
 canvas.addEventListener("blur", cancelAll);
 window.addEventListener("blur", cancelAll);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") cancelAll();
+  visible(document.visibilityState !== "hidden");
 });
 window.addEventListener("resize", render);
 
 new ResizeObserver(() => render()).observe(canvas);
 
+function frame(now: number): void {
+  if (!manualClock) advanceBy(clock.consume(now));
+  requestAnimationFrame(frame);
+}
+
 render();
 canvas.focus();
+requestAnimationFrame(frame);

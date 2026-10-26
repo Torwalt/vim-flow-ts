@@ -24,7 +24,7 @@ type ConstructionState = {
 
 async function open(page: Page): Promise<void> {
   await page.setViewportSize({ width: 800, height: 600 });
-  await page.goto("/");
+  await page.goto("/?clock=manual");
   await expect(page.locator("#world")).toHaveAttribute("data-ready", "true");
   await page.locator("#world").click({ position: { x: 8, y: 8 } });
 }

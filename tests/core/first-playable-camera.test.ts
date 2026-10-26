@@ -41,7 +41,7 @@ for (const example of cameraCases) {
   });
 }
 
-test("coverage activates V1 camera cases and leaves the complete loop pending", () => {
+test("coverage activates V1 camera cases and the complete browser loop", () => {
   expect(cameraCases.map(example => example.id).sort()).toEqual([
     "camera.bottom-right",
     "camera.follow-threshold",
@@ -52,8 +52,8 @@ test("coverage activates V1 camera cases and leaves the complete loop pending", 
   expect(coverage.requirements.V1?.cases?.slice().sort()).toEqual(cameraCases.map(example => example.id).sort());
   expect(coverage.requirements.V1?.tests).toContain("tests/core/first-playable-camera.test.ts");
   expect(coverage.requirements.V1?.tests).toContain("tests/browser/viewport.spec.ts");
-  expect(coverage.requirements.V2?.status).toBe("pending");
-  expect(coverage.requirements.V2?.cases).toEqual([]);
+  expect(coverage.requirements.V2?.status).toBe("active");
+  expect(coverage.requirements.V2?.cases).toEqual(["browser.complete-loop"]);
 });
 
 test("visible cells use whole 12x20 cells and never fall below one", () => {

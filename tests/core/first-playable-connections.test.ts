@@ -117,7 +117,7 @@ for (const example of cases) {
   });
 }
 
-test("coverage activates I2, L1 and L2 with every connection case and leaves later work pending", () => {
+test("coverage activates I2, L1 and L2 with every connection case", () => {
   for (const id of ["I2", "L1", "L2"]) {
     const owned = cases.filter(example => example.requires.includes(id)).map(example => example.id).sort();
     expect(coverage.requirements[id]?.status).toBe("active");
@@ -129,9 +129,7 @@ test("coverage activates I2, L1 and L2 with every connection case and leaves lat
   }
   expect(coverage.requirements.L1?.exports).toContain("game.link");
   expect(coverage.requirements.L2?.exports).toContain("game.link");
-  for (const id of ["V2"]) {
-    expect(coverage.requirements[id]?.status).toBe("pending");
-  }
+  expect(coverage.requirements.V2?.status).toBe("active");
 });
 
 test("I2 accepts bounded printable drafts, wastes backspaces and ignores blocked/nonprintable input", () => {

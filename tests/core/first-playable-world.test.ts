@@ -67,15 +67,13 @@ for (const example of cases) {
   });
 }
 
-test("coverage activates W1, W2, N1, N2, V1, B1, B2 and I1 while later requirements stay explicit", () => {
+test("coverage activates every first-playable requirement with its mapped cases", () => {
   const ids = ["W1", "W2", "N1", "N2", "V1", "V2", "B1", "B2", "I1", "I2", "L1", "L2", "E1", "E2", "E3", "E4", "T1", "T2"];
   expect(Object.keys(coverage.requirements).sort()).toEqual([...ids].sort());
-  for (const id of ["W1", "W2", "N1", "N2", "V1", "B1", "B2", "I1", "I2", "L1", "L2", "E1", "E2", "E3", "E4", "T1", "T2"]) expect(coverage.requirements[id]?.status).toBe("active");
+  for (const id of ids) expect(coverage.requirements[id]?.status).toBe("active");
   expect(coverage.requirements.W1?.cases).toEqual(["world.initial"]);
   expect(coverage.requirements.W2?.cases?.sort()).toEqual(cases.map(c => c.id).sort());
-  for (const id of ["V2"]) {
-    expect(coverage.requirements[id]?.status).toBe("pending");
-  }
+  expect(coverage.requirements.V2?.cases).toEqual(["browser.complete-loop"]);
 });
 
 test("W1 initial world has exact dimensions, identity and an empty fixed map", () => {

@@ -11,10 +11,12 @@ just setup
 just dev
 ```
 
-Open http://localhost:3000 and click the field. `just verify` checks contract
-integrity, all 50 named navigation obligations, TypeScript, core behavior and
+Open http://localhost:3000 and click the field. `just verify` runs the complete
+first-playable gate: frozen corpus integrity, all 18 property IDs and 53 cases,
+the original 50 named navigation obligations, TypeScript, core behavior and
 development/production Chromium. `just check-nix` checks the Nix static build.
-`just timing` records production browser dispatch timings in `artifacts/`.
+`just timing` records production browser dispatch timings for the eight-site and
+all-space worlds plus bounded direct-core stress probes in `artifacts/`.
 `nix build` produces the static site. `just preview` serves `dist/` on port 4173.
 
 The flake retains the sibling's locked Bun, TypeScript, agent harnesses, Ploopy,
@@ -33,9 +35,11 @@ it for free, Escape cancels and the core glyphs preview the choice. At a built
 site, `i` opens a 32-character command buffer: exact `connect` plus Escape or
 Enter stages a well, and Enter at a ring commits a persistent directed arrow
 from the well; ring Escape retries and Normal Escape or blur cancels. The pure
-core now advances linked mana on exact 100 ms ticks and creates up to five
-ordered stationary imps per ring, with manual pause and hidden suspension;
-browser live scheduling is the next unit. The execution plan runs under OpenCode /
+core advances linked mana on exact 100 ms ticks and creates up to five ordered
+stationary imps per ring. The browser forwards monotonic frame time into that
+core, suspends without catch-up while the tab is hidden, and Normal `p` toggles
+manual pause; the HUD shows mana, link endpoints, produced imps out of five,
+mode, draft, source and simulation time. The execution plan runs under OpenCode /
 `deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
 measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).
@@ -49,10 +53,12 @@ the ignored environment via `.ploopy.toml`. `ploopy status` lists open plans.
 The navigation plan is completed and landed.
 On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
 
-## Next implementation
+## First playable
 
-The shared [first-playable game authority](docs/first-playable.md) and
-[Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are active. The
+The shared [first-playable game authority](docs/first-playable.md) is implemented
+by the [Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md): the
 full-window 240×160 world, camera, free keyboard construction, typed directed
-connections, linked mana, stationary imps and the pure elapsed clock are in
-place; browser live scheduling and the complete rendering loop remain planned.
+connections, linked mana, five ordered stationary imps per ring, visible
+monotonic time, manual pause and hidden suspension all run in development and
+production builds. `just first-playable-complete` executes the mapped core and
+browser suites; `just verify` requires it.

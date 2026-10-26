@@ -8,7 +8,8 @@
     "B1/B2 share one pure game.build empty->well/ring transition; the keyboard menu also uses it and game.preview composes the real target-patch glyphs without mutating the world.",
     "Build menus preserve pendingSource; blocked keys are identity and blur or Escape cancellation never constructs.",
     "I2/L1/L2 use one pure game.link transition; Insert drafts are bounded to 32 printable characters, keyboard commit/retry/cancel and direct link events share that transition, and browser arrows are presentation overlays over the composed text field.",
-    "E1-E4/T1-T2 use one private economy/tick transition behind game.advance and the elapsed/visibility events; generation, ascending-well transfer, ordered ring summoning, saturated buffers and pause/suspension are checked against the shared corpus plus independent property examples."
+    "E1-E4/T1-T2 use one private economy/tick transition behind game.advance and the elapsed/visibility events; generation, ascending-well transfer, ordered ring summoning, saturated buffers and pause/suspension are checked against the shared corpus plus independent property examples.",
+    "V2 runs the production browser update/render path with a real keyboard and a manual monotonic clock (`?clock=manual`) plus real visibility events; `browser.complete-loop` is executed in both Playwright projects and the frame-clock accumulator is unit tested. The manual clock is test infrastructure, not player UI."
   ],
   "requirements": {
     "W1": {
@@ -114,9 +115,22 @@
       ]
     },
     "V2": {
-      "status": "pending",
+      "status": "active",
       "unit": "7.1",
-      "cases": []
+      "exports": [
+        "game.dispatch",
+        "game.advance",
+        "game.observe",
+        "web.clock.ElapsedClock",
+        "web.camera.followCamera"
+      ],
+      "tests": [
+        "tests/core/first-playable-clock.test.ts",
+        "tests/browser/complete-loop.spec.ts"
+      ],
+      "cases": [
+        "browser.complete-loop"
+      ]
     },
     "B1": {
       "status": "active",
