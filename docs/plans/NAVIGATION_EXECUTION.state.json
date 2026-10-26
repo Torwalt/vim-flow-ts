@@ -147,6 +147,31 @@
         "reasoning": 22900,
         "cache_read": 2420352
       }
+    },
+    "7.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:22:12+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "a58a39872495420ad7caeb82942714c3aadec15c",
+      "commits": [
+        "8f30af93666749d7ea3f440a2bfb94d48952cb38 Render and exercise the navigation scene"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 7.1\n\n**What landed**\n- `8f30af9` — the playable browser scene: seeded field, visible cursor, pending\n  mode/position report, keyboard focus, blur cancellation, blocked modifiers and\n  composed-input policy. It captures events into `Input` and feeds\n  `actualApi.step`; it does not compute destinations.\n- `tests/browser/navigation.spec.ts` checks reported observations and actual\n  cursor pixels for the initial frame, `5j`, Shift+`w`, `2fx` (miss and counted\n  hit), `F`, `gg`, `3G`, Escape, blocked Ctrl/Alt/Meta chords, blur and a\n  composed keydown. The retained baseline smoke test still runs.\n- `just verify` now depends on `contract-complete`; all 50 named obligations,\n  91 core tests, 22 browser tests across development and production, and\n  benchpress lint are green. `just test` is also green.\n- Evidence includes the high-count timing table and Ploopy report/history data.\n  README, direction, AGENTS and the evidence document were refreshed; the\n  completed navigation-comparison workbench topic was removed with\n  `benchpress rm`. Plan files and state were left for Ploopy.\n\n**Landmark drift**\n- None in the described source landmarks. `src/web/main.ts` already existed and\n  was replaced; `tests/browser/baseline.spec.ts` was retained rather than\n  rewritten, with navigation coverage in the new independent spec.\n\n**Deviations from the work order**\n- Timing was measured from a temporary script under `/tmp/opencode`, not added\n  to the repository, using the built production preview and synthetic sequential\n  keydowns. The evidence records the method and context.\n- The browser test hard-codes the cursor's rendered RGB and the authority's\n  expected destinations; it does not import browser constants or recompute\n  outcomes.\n- AGENTS.md gained the corrected navigation-status sentence in addition to the\n  explicitly requested README and direction updates.\n- `just check-nix` was not run because no flake file changed.\n\n**What the next session must know**\n- This is the last planned unit. The loop should record 7.1 and `ploopy land`\n  should close the plan and state; do not delete or edit them by hand.\n- Browser state is in memory only: reload returns to the seed. The cursor is\n  reported through `data-position`, `data-mode`, `data-count`, `data-row` and\n  `data-column` on `#world`, and visually via the `#f5c451` cursor cell.\n- Canvas focus is required for keyboard input. Canvas and window blur send an\n  unblocked Escape. Ctrl/Alt/Meta chords become blocked input; multi-code-point\n  keys become `Other`; active composition keydowns are ignored until commit.\n- Escape and unmodified single-code-point keys are `preventDefault`ed. Modified\n  chords are left to browser shortcuts by design.\n- `just contract-complete` still needs the recipe's `env -u AGENT -u\n  CLAUDECODE -u REPL_ID` wrapper so Bun prints the 50 passing names.\n- Timing evidence: max single in-browser dispatch was 1.6 ms on the recorded\n  host; no sustained stalls were observed. This is finite evidence, not a\n  latency pass mark.\n- Ploopy's state file has no 7.1 cost/token/elapsed figures until the loop writes\n  them; the evidence labels them unknown rather than zero.\n\n**Open problems**\n- None blocking. The scene intentionally has no editing, time, objective or\n  scoring. Timing covers one host, one headless Chromium and one production\n  bundle, so it does not establish broader performance or usability.",
+      "session_id": "ses_e85ec5c46ffet8mAl3lGbKGC28",
+      "cost_usd": 0.063639846,
+      "harness": "opencode",
+      "elapsed_s": 264,
+      "session_s": 256,
+      "verify_s": 7,
+      "test_s": 1,
+      "tokens": {
+        "input": 234721,
+        "output": 12850,
+        "reasoning": 23212,
+        "cache_read": 2264832
+      }
     }
   }
 }
