@@ -1,0 +1,29 @@
+{
+  "units": {
+    "1.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T23:49:34+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "092d9193841dec9f5e7496176f4b614672483706",
+      "commits": [
+        "7e332f1dae70b46e88ce1fa8e6170d5f91404b57 Harden navigation baseline checks and retain timing probe"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.1\n\n**What landed**\n- `7e332f1` — baseline validation/hardening only; no game features or production\n  behavior changes.\n- Added six high-count word probes at 1/99/9999 with recorded final positions,\n  pending count/find/go blur regressions, and blocked modified Escape/Enter/\n  Backspace plus Other browser regressions.\n- Added the retained baseline probe `tools/experiments/first-playable-timing.ts`\n  and `just timing`; it drives the production bundle through sequential synthetic\n  keydowns (no Playwright round trips), 3 warmups and 5 measured runs.\n- `artifacts/` is ignored. This run's machine-readable result is\n  `artifacts/first-playable-timing-baseline.json`; raw logs remain outside Git.\n\n**Baseline receipt**\n- Active original IDs/cases: all 50 navigation obligations; first-playable\n  requirement IDs/cases remain pending (none owned by 1.1).\n- Checks green: `direnv exec . just verify`, `direnv exec . just test` and\n  `nix develop --command just verify`: 53 fixture examples, 50 named navigation\n  checks, 92 core tests, 24 browser tests (12 development + 12 production),\n  typecheck and benchpress lint. `just contract-complete` separately green.\n- Repairs: none required. The existing fixed-point word optimization remains.\n- Timing, 49 commands on the 40x20 seed, Linux x86_64, Bun 1.3.13, Chromium\n  150.0.7871.181: max single dispatch 2.00 ms (`e`, count 9999); most medians\n  0.20–0.50 ms. Word high-count finals from start 0: `w`/`W` 6, 799, 799;\n  `b`/`B` 0, 0, 0; `e`/`E` 4, 799, 799. No timing threshold is claimed.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort.\n  Token/cost/elapsed figures are not available to this session and are not\n  invented here.\n\n**Landmark drift**\n- None in the named source/tests/justfile. The plan targets `15f3e2c`; the\n  working tree already contained the later planning commit `092d919`, but no\n  production navigation code differs from the plan's assumptions.\n- The old timing script was never in Git; the retained probe is new, not a\n  recovered file.\n\n**Deviations from the work order**\n- `just timing`, `artifacts/` in `.gitignore` and one README line were added so\n  the timing probe is usable and its output cannot be committed accidentally.\n- The probe currently measures the existing seed in the production browser. It\n  does not yet measure the 240x160 site world or all-space text because this\n  stage has no selection/factory path into the browser; final assembly owns\n  those extensions.\n\n**What the next session must know**\n- Navigation production code is untouched: `words.wordMove`, `model.field/pack/\n  view`, `actualApi` and browser blur/input handlers are as landed before this\n  unit. `just verify` now includes `first-playable-fixtures`, `contract` and\n  `contract-complete`.\n- Browser blur coverage is now count, FindRight, FindLeft and Go. Blocked\n  Escape/Backspace/Enter and Other preserve a pending find.\n- `just timing` builds first, writes to `artifacts/` by default, and accepts an\n  optional output path argument. It records environment plus per-command\n  samples, final position/mode, median and max.\n- No `spec/first-playable/coverage.json` exists yet. Unit 2.1 creates it and\n  activates W1/W2 while marking later work pending; baseline work must not be\n  presented as a first-playable requirement.\n- Benchpress lint still warns about the historical missing\n  `vim-game-bend-main.md` link in `docs/workbench/first-playable-rts.md`; the\n  command exits green. No flake file changed, so `check-nix` was not rerun.\n\n**Open problems**\n- Extend the timing probe to all-space text via the real core factory and to\n  the 240x160 world with sites in the browser-facing units; add the bounded\n  direct-core stress probe required by shared §9 then.\n- Measurements are one host, one headless Chromium and one production bundle;\n  they are finite evidence, not a universal latency or usability claim.",
+      "session_id": "ses_e859b4221ffeO6HSxUllnDwfRQ",
+      "cost_usd": 0.04017388799999999,
+      "harness": "opencode",
+      "elapsed_s": 190,
+      "session_s": 182,
+      "verify_s": 8,
+      "test_s": 1,
+      "tokens": {
+        "input": 105444,
+        "output": 8931,
+        "reasoning": 16556,
+        "cache_read": 3021696
+      }
+    }
+  }
+}
