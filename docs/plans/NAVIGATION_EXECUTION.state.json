@@ -1,0 +1,29 @@
+{
+  "units": {
+    "1.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:08:43+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "5bbede0a74cbb93198644260ad17b155792b2530",
+      "commits": [
+        "0ece0a8967a6bb450329a14d3f5dc59f8bdd21e4 Add the navigation model and its observable contracts",
+        "4c8d4843cd2f83de81b61e5cc99f98880ab97f56 Record the navigation model evidence"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.1\n\n**What landed**\n- `0ece0a8` — `src/core/model.ts`, `src/core/navigation.ts`, the contract assembly\n  at `tests/core/navigation-contract.test.ts` (model group only), and\n  `tests/core/navigation-model.test.ts` with independent normalization,\n  outside-position and pack/view roundtrip examples.\n- `4c8d484` — evidence row and representation notes in\n  `docs/experiments/navigation.md`.\n\n**Landmark drift**\n- None. All planned paths existed or were created as named.\n- `tests/core/navigation-contract.test.ts` did not exist at setup; it now exists\n  with `registerModel(model)` as the first cumulative group.\n\n**Deviations from the work order**\n- The unit is two commits: implementation/tests first, then evidence containing\n  the first commit's hash. The evidence commit is `4c8d484`.\n- No movement, input or browser code was touched, as required.\n\n**What the next session must know**\n- `src/core/navigation.ts` is the stable entry. It currently re-exports\n  `Input`, `Mode`, `ModelApi`, `View` from `spec/navigation/api.ts`, plus\n  `Field`, `State` and `model` from `src/core/model.ts`. Add future APIs to this\n  entry cumulatively.\n- `Field` is a branded `string` at runtime (`string \u0026 unique symbol`), always 800\n  printable ASCII cells. Construct it only through `model.field`; `contents`\n  returns the same string.\n- `State` is currently exactly `View\u003cField\u003e`: `pack`/`view` shallow-copy the\n  mode and preserve field identity. There is no hidden state yet.\n- `model.at` compares the bigint position against `800n` before converting to a\n  number. Keep that order for huge positions.\n- Normalization reuses `normalized`/`seedText`/`size` from\n  `spec/navigation/helpers.ts`, explicitly permitted by the authority. Do not\n  edit that file; the contract integrity manifest guards it.\n- The next unit should append `registerAxis(model)` (or the eventual API object)\n  to `tests/core/navigation-contract.test.ts` without removing `registerModel`.\n  `just contract-complete` remains for unit 6.\n\n**Open problems**\n- None for unit 1.1. `just verify` is green with 17 core tests and 2 browser\n  tests. No high-count timing or browser navigation exists yet by design.",
+      "session_id": "ses_e85f649bfffeAwQ7EoW9ld5ql3",
+      "cost_usd": 0.015707772,
+      "harness": "opencode",
+      "elapsed_s": 106,
+      "session_s": 103,
+      "verify_s": 3,
+      "tokens": {
+        "input": 35098,
+        "output": 4351,
+        "reasoning": 9065,
+        "cache_read": 797824
+      }
+    }
+  }
+}
