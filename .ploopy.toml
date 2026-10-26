@@ -1,0 +1,15 @@
+plans = "docs/plans"
+launch = "tmux"
+setup = 'if [ ! -e .env ]; then ln -s "$PLOOPY_MAIN/.env" .env; fi && direnv allow . && direnv exec . just setup'
+verify = "direnv exec . just verify"
+test = "direnv exec . just test"
+
+[run]
+agent = "opencode"
+model = "deepseek/deepseek-flash"
+effort = "high"
+push = false
+secondary = "none"
+
+[automation]
+rescue = "none"

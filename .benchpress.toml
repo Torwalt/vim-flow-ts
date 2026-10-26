@@ -1,0 +1,3 @@
+dir = "docs/workbench"
+kinds = ["bug", "change", "design", "experiment"]
+areas = ["gameplay", "vim", "presentation", "tooling"]
