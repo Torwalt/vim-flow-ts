@@ -74,6 +74,31 @@
         "reasoning": 29076,
         "cache_read": 3813504
       }
+    },
+    "3.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T00:04:14+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "3b1600e3f82e87008186658847065db91fbbbad7",
+      "commits": [
+        "ca94c2a81678ce8fc81b90d069f36cce41eeaafc Replace the landing page with the full-window viewport"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 3.1\n\n**What landed**\n- `ca94c2a` — full-window 240x160 viewport, 32px HUD, 12x20 CSS cells, DPR backing and the integer camera helper in `src/web/camera.ts`.\n- `src/web/main.ts` now drives `game` (not the old `actualApi`) through key/blur dispatch, including focus, blocked modifiers, composition and blur.\n- Browser navigation was rewritten for the 240x160 world; new camera/resize/DPR tests cover V1. `coverage.json` activates V1 and keeps V2 onward pending.\n\n**Baseline vs new feature**\n- Baseline receipt remains unit 1.1 / `7e332f1`: 50 navigation obligations, original 40x20 core exports/contracts unchanged.\n- This unit adds 9 core camera tests (140 total) and 20 browser tests per project (44 total across development+production).\n- Timing script was retargeted from the old 40-column row to row 240 and smoke-run: 49 commands, 3 warmups, 5 runs, ~0.2–2.8 ms medians. Artifact is ignored/local; no usage/cost figures were exposed and none invented.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort.\n\n**Checks**\n- `direnv exec . just verify`: green (fixtures 53/18, 50 named navigation checks, typecheck, 140 core tests, 44 browser tests in development+production, benchpress warning only for the historical missing note link).\n- `direnv exec . just test`: green, 140 pass.\n\n**Landmark drift**\n- All named landmarks exist. The old 40x20 browser fixture was replaced as the plan permits; direct core regressions and all 50 named checks remain.\n- `tests/browser/navigation.spec.ts` is rewritten, not deleted; `tests/browser/viewport.spec.ts` is new.\n- Camera logic is presentation code in `src/web/camera.ts`; its corpus tests live in `tests/core/first-playable-camera.test.ts` so `just test` exercises them.\n\n**Deviations from the work order**\n- Link lines/arrowheads and incident-link highlighting are deferred to V2: there is still no construction/link command path, and the initial world has no links. The renderer draws the core field glyphs, sites, imps and cursor only.\n- Hidden visibility dispatches the same cancellation as blur but does not suspend time; the core has no visibility/suspension event yet (T2/V2).\n- HUD shows observed values only: site kind/mana/link/produced, mode/count, source, draft, pause/suspended flags and elapsed ticks (currently always zero until the clock unit).\n\n**What the next session must know**\n- Use `game.dispatch(state, {type:\"key\", key, blocked?})` and `{type:\"blur\"}`; the event union still lacks construction/link/elapsed/visibility.\n- Canvas `data-*` exposes cursor, camera, visible columns/rows, cell size, DPR, mode/count, pending source, draft, pause/suspension, elapsed ticks/remainder and `data-position = y*240+x` for the timing script.\n- Camera state is carried between renders and re-followed on movement/resize; `followCamera` is pure and clamps to `max(0, world-visible)`.\n- The HUD is a 32px bottom bar; `index.html`/`style.css` use a fixed full-viewport flex column with `overflow:hidden`.\n- `just timing` now expects the new 240-column row; do not restore the old 40-column reset.\n\n**Open problems**\n- V2 must add link/arrow rendering, selected-link highlight, staged-source preview, and visibility-driven time suspension.\n- The browser cannot yet construct, link, type, pause or advance time; those remain later units.\n- `snapshot` still does not carry camera or transient states; camera is intentionally outside the core.\n- No usage/cost/elapsed session metrics were available. Only the timing smoke-run above was observed.",
+      "session_id": "ses_e85900a90ffeq3p3KnwQoy3HYE",
+      "cost_usd": 0.06221744400000001,
+      "harness": "opencode",
+      "elapsed_s": 336,
+      "session_s": 326,
+      "verify_s": 8,
+      "test_s": 1,
+      "tokens": {
+        "input": 146970,
+        "output": 19412,
+        "reasoning": 29595,
+        "cache_read": 3589248
+      }
     }
   }
 }
