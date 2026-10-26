@@ -174,6 +174,31 @@
         "reasoning": 16893,
         "cache_read": 3517824
       }
+    },
+    "7.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T00:27:13+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "e2a32178787208b9d9cf901708d89d7c6cfa445d",
+      "commits": [
+        "494b8b4010d5ea2c45f03a7d8290afb21981d3d0 Wire the live clock and complete the playable loop"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 7.1\n\n**What landed**\n- `494b8b4` — the browser now forwards monotonic frame time into `game.dispatch`, suspends hidden tabs without catch-up, resumes without counting hidden time, and keeps Normal `p`/HUD pause behavior. The live HUD already renders core-observed mana, links, produced/5, mode, draft and time.\n- Added `src/web/clock.ts` (`ElapsedClock`) and a manual test clock at `?clock=manual` exposing `window.__vimFlowTest` (`advance`, `load`, `observe`, `snapshot`). The manual clock drives the same production `advanceBy`/`render` path.\n- V2 is active with `browser.complete-loop`; coverage now reports all 18 properties and all 53 cases. `just first-playable-complete` executes the core/browser suites and then checks the active coverage/case map, test-file presence and absence of skip/todo/only. `verify` now depends on it.\n- Added browser integration tests for the complete build/connect/produce loop, five imp glyph cells, link highlight, pause, real hidden/visible events, live rAF time, Insert/Build continuity and every modal blur state. Existing browser suites use the deterministic manual clock; one test exercises the default live clock.\n- Extended `tools/experiments/first-playable-timing.ts` to both the eight-site and all-space worlds, cross-checks browser final positions against direct-core dispatch, and runs bounded direct-core stress in a child process. Updated README/direction and removed the resolved workbench topic with `benchpress rm`.\n\n**Landmark drift**\n- No named landmark moved. `tools/experiments/first-playable-timing.ts` is retained but extended: 2 fields × 49 commands, 3 warmups/5 runs, plus direct-core commands and elapsed probes.\n- `docs/workbench/first-playable-rts.md` is deliberately gone; `benchpress lint` is clean and `NEXT.md` was not reordered.\n- New files: `src/web/clock.ts`, `tests/core/first-playable-clock.test.ts`, `tests/browser/complete-loop.spec.ts`, `tools/check-first-playable-completion.ts`.\n\n**Deviations from the work order**\n- Manual-clock control is a query-parameter test harness, not player UI; it uses the real production update/render path rather than fake observations.\n- Existing browser specs were switched to `?clock=manual` so live time cannot make them nondeterministic; the new live test proves the default path still advances.\n- The bounded direct-core stress probe lives behind `--core-stress` inside the retained timing script, spawned with a 20 s timeout.\n\n**What the next session must know**\n- Baseline receipt remains unit 1.1/`7e332f1` (40×20, 49 commands), separate from this unit.\n- Current timing artifact: `artifacts/first-playable-timing.json`. Eight-site browser dispatch max median 3.30 ms / max 5.70 ms; all-space max median 1.30 ms / max 2.30 ms. Direct core: 6,000 ticks 2.49 ms median (2.75 max), 60,000 ticks 23.55 ms median (26.62 max), 20 imps. Environment: NixOS Linux 6.18.55 x64, Bun 1.3.13, Chromium 150.0.7871.181, TypeScript 5.9.3, OpenCode `deepseek/deepseek-flash` high. No numeric timing gate is claimed.\n- Checks green: `direnv exec . just verify` (213 core tests, 68 browser tests across development+production, 50 navigation checks, completion 18/53, typecheck, lint) and `direnv exec . just test` (213 pass).\n- `advanceBy` renders only when `elapsedTicks` changes, so sub-tick remainder changes do not repaint; HUD time is tick-resolution.\n- `window.__vimFlowTest` exists only with `?clock=manual`. `game.advance` remains the only production time transition.\n\n**Open problems**\n- Large safe elapsed values are still simulated tick-by-tick; 60,000 ticks is ~24 ms but there is no closed-form fast path and unsafe integers are rejected.\n- Runtime/property tests and the 53-case corpus are finite evidence, not universal proofs; the 40×20 navigation contract remains the compatibility fixture.\n- Timing is one host, one headless Chromium and one production bundle.",
+      "session_id": "ses_e857c8737ffe1nmLBQbOIY553p",
+      "cost_usd": 0.07219447799999999,
+      "harness": "opencode",
+      "elapsed_s": 435,
+      "session_s": 423,
+      "verify_s": 11,
+      "test_s": 1,
+      "tokens": {
+        "input": 107981,
+        "output": 21770,
+        "reasoning": 34668,
+        "cache_read": 7378176
+      }
     }
   }
 }
