@@ -24,6 +24,31 @@
         "reasoning": 16556,
         "cache_read": 3021696
       }
+    },
+    "2.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T23:54:00+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "95771842d2f15799e55bba35bd0edcd183abe42f",
+      "commits": [
+        "ef2c925da5a2c1f3cc8d899d217a78718e2ff5fd Model the larger world, sites and validated observations"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 2.1\n\n**What landed**\n- `ef2c925` — new pure `src/core/world.ts` plus cumulative `src/core/game.ts`\n  facade; validated scenario/snapshot constructors, observations, site hitboxes,\n  composed semantic glyphs and five reserved ring slots.\n- `tests/core/first-playable-world.test.ts` runs all four `world.json` cases\n  through the real factory/observations and adds independent W1/W2 roundtrip,\n  normalization, boundary, non-overlap, glyph and purity checks.\n- `spec/first-playable/coverage.json` activates W1/W2 with all world cases and\n  marks N1 through T2 pending by owning unit.\n- Workbench topic now carries a one-line progress pointer; no new narrative.\n\n**Baseline vs new feature**\n- Baseline receipt remains unit 1.1 / `7e332f1`: 50 navigation obligations,\n  92 core and 24 browser tests. This unit adds 15 world tests (107 core total)\n  and changes no navigation, browser or timing behavior.\n\n**Active state**\n- Active requirements: W1, W2. Active cases: `world.initial`,\n  `world.far-target`, `world.outside-site`, `world.boundary-site`.\n- Later groups remain unregistered; no skip/todo/only filtering was introduced.\n\n**Checks**\n- `direnv exec . just verify`: green (fixture integrity 53/18, 50 named navigation\n  checks, typecheck, 107 core tests, 24 browser tests development+production,\n  benchpress lint warning only for the historical missing note link).\n- `direnv exec . just test`: green, 107 pass.\n- `direnv exec . just first-playable-fixtures`: green; it still states that it\n  does not assess implementation.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort.\n  No usage/cost/elapsed figures were exposed to this session; none invented.\n  No timing probe is claimed for this unit.\n\n**Landmark drift**\n- Named landmarks (`src/core/model.ts`, `spec/navigation/api.ts`,\n  `src/core/navigation.ts`, `tests/core/navigation-model.test.ts`) are unchanged.\n  The existing 40x20 model remains the compatibility contract; the game world is\n  a separate facade. No source drift required a repair.\n\n**Deviations from the work order**\n- Used a new private `world.ts` behind `game.ts` rather than generalizing the old\n  model in place, keeping old exports/tests untouched.\n- Scenario input accepts only the core corpus fields currently needed\n  (`navigationOnly`, `rows`, `cursor`, `buildings`, `pendingSource`) and rejects\n  unknown fields; it does not yet accept later mode/clock fixtures.\n- `snapshot` is the observable roundtrip constructor; it omits all-blank\n  navigation rows because they reconstruct identically.\n\n**What the next session must know**\n- `game.field(world)` returns `{width: 240, height: 160, text}` in world space;\n  `glyphAt`/`siteAt` are pure queries. `game.field(...).text` is the intended\n  generalized 240x160 input for navigation in 2.2.\n- `navigationOnly` scenarios have zero sites/buildings and cursor-targeting null;\n  rows are sanitized code point by code point, truncated/padded to 240.\n- Rings derive exactly slots 1..produced; rally coordinates are site origin\n  plus relative columns 1,3,5,7,9 on relative row 6.\n- Invalid scenarios throw rather than falling back to defaults. Well links and\n  pending sources require an existing well/ring of the right kind.\n- Simulation observations currently report constant Normal, count 0, no menu,\n  unpaused, visible, zero clock/remainder; those become real in later units.\n\n**Open problems**\n- README/direction still describe the game as planned; stage 7 owns updating the\n  public description to what actually runs.\n- No browser/camera/navigation wiring uses the new world yet; that starts in 2.2\n  and 3.1.\n- The world test file contains the minimal corpus adapter; later units may extend\n  it with event dispatch and additional group registration.\n\nDONE",
+      "session_id": "ses_e85985a65ffeilug91KsIT9i8g",
+      "cost_usd": 0.041946150000000015,
+      "harness": "opencode",
+      "elapsed_s": 267,
+      "session_s": 257,
+      "verify_s": 8,
+      "test_s": 1,
+      "tokens": {
+        "input": 47109,
+        "output": 15433,
+        "reasoning": 29452,
+        "cache_read": 2649600
+      }
     }
   }
 }
