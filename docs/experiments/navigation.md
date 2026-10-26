@@ -16,6 +16,7 @@ metrics remain unavailable. A finite test pass is not a proof.
 | 2.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, typecheck, 27 core tests, 2 browser tests, benchpress lint; the active contract file reports 14 named checks (nine model plus five axis) | No failed approach or manual assistance. `registerAxis(axis)` was appended after `registerModel(model)`; the earlier group stayed active. No interface revision was needed. |
 | 3.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, typecheck, 37 core tests, 2 browser tests, benchpress lint; the active contract file reports 18 named checks (nine model, five axis plus four words) | No failed approach or manual assistance. `registerWords({ ...model, ...words })` was appended after the axis group; all earlier groups stayed active. No interface revision was needed. Hand-working the expected punctuation and row-split destinations needed care because starts and ends fall on different cells of the same run. |
 | 4.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 49 core tests, 2 browser tests, benchpress lint; the active contract file reports 24 named checks (nine model, five axis, four words plus six lines) | No failed approach or manual assistance. `registerLines({ ...model, ...lines })` was appended after the words group; all earlier groups stayed active. No interface revision was needed. |
+| 5.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 59 core tests, 2 browser tests, benchpress lint; the active contract file reports 27 named checks (nine model, five axis, four words, six lines plus three find) | No failed approach or manual assistance. `registerFind({ ...model, ...find })` was appended after the lines group; all earlier groups stayed active. No interface revision was needed. One independent row-boundary expectation was initially hand-worked as crossing into the previous row and corrected by re-reading the strict same-row rule before the suite ran. |
 
 **Unit 1.1 representation notes.** `Field` is a normalized 800-cell ASCII string
 at runtime, branded at the type level so ordinary strings cannot be passed as a
@@ -69,3 +70,23 @@ ignored by `zero` and `indent`. Independent examples in
 row, a leading-space row and a flush-left row, then hand-work default, counted,
 clamped and huge-count destinations for all five motions plus the all-nonblank
 first-row case.
+
+**Unit 5.1 rank and boundary notes.** `findMove` scans only the cursor's own
+40-cell row and uses the supplied `hit` predicate, so strictness, current-cell
+exclusion and target equality all come from the same relation as `findSelected`.
+Forward scans ascend from `position + 1` to the row end; backward scans descend
+from `position - 1` to the row start. A bigint rank increments on each hit and
+the scan returns when the rank equals the requested count, so the exact nth hit
+is selected without storing partial results. Zero and any rank beyond the row's
+hit count return the original position: the final `return position` is the only
+miss outcome, which is why an insufficient rank never returns the last hit. The
+bigint comparison never converts the count to a number, so `10n ** 30n` and
+other huge ranks are exact. An absent parser count is not handled here; this unit
+exposes only the motion API, where zero is identity and the input layer will
+supply the default count later. Independent examples in
+`tests/core/navigation-find.test.ts` hand-work repeated and missing targets,
+current-cell-only matches, spaces as literal targets, row starts/ends on a
+continuous run crossing the row boundary, insufficient ranks, zero, and huge
+ranks. The first hand-worked boundary example wrongly expected a backward find
+from column zero to cross into the previous row; re-reading the strict same-row
+rule corrected it to the original position before the suite ran.
