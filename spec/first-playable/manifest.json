@@ -1,0 +1,34 @@
+{
+  "caseCount": 53,
+  "requirementIds": [
+    "W1",
+    "W2",
+    "N1",
+    "N2",
+    "V1",
+    "V2",
+    "B1",
+    "B2",
+    "I1",
+    "I2",
+    "L1",
+    "L2",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "T1",
+    "T2"
+  ],
+  "files": {
+    "docs/first-playable.md": "b1ab7c319244cd3644c1cd6e3cb60ed2d88d36597e2560b6de3fc05516b3d644",
+    "spec/first-playable/obligations.md": "deb2fcd3b7a02e65bce8a8c0c93f7a6ebee73fde034278d8c448840708276a94",
+    "spec/first-playable/world.json": "532a9d3e5e4078780f6f576c07cf0363b9c9599d5cc47d9d45d3a0e5ce0bedf0",
+    "spec/first-playable/navigation.json": "a39dd3bb5042531908afde8e318fe54d3ec1f99e2431b3a850de61f4cbeef00b",
+    "spec/first-playable/construction.json": "c3bbfbdfdbe4f8f280b75cfb5deca9fe65ab1f9038a3c73a390ae2d08ebfbac3",
+    "spec/first-playable/connections.json": "eb79a603c3058f39564c9d7331fd56b4040eb59d7de7a21842c8660d971f349b",
+    "spec/first-playable/economy.json": "be971d9af98b38351e35bb7eb92b064587bdb739f2f5eb46c6f2942ce9819e79",
+    "spec/first-playable/clock.json": "56cec15150aa6735217e0cb0c13166a7e5f57e9f8a20ce9440d6edd7bbd20d9a",
+    "spec/first-playable/browser.json": "7f0603bae3a38afd527de52bc2b0c84cdec65bee9b91f85a6f4927a0d74df566"
+  }
+}

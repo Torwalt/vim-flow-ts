@@ -28,8 +28,8 @@ Follow `AGENTS.md` and `docs/direction.md`. Run `nix develop --command just veri
 before finishing changes, and `nix develop --command just check-nix` after flake
 changes. Preserve the configured Git identity and omit AI attribution in commits.
 
-For this comparison, implement from this repository's authority and public
-contracts. Do not inspect the completed sibling implementation. Record test or
+For this comparison, implement from this repository's active authority and public
+contracts. FIRST_PLAYABLE keeps NAVIGATION as a 40x20 compatibility contract. Do not inspect the completed sibling implementation. Record test or
 interface revisions and preserve all mapped behavioral obligations. Runtime
 property checks are finite evidence, not universal proofs.
 

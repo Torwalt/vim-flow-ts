@@ -1,0 +1,248 @@
+[
+  {
+    "id": "camera.bottom-right",
+    "requires": [
+      "V1"
+    ],
+    "setup": {
+      "camera": {
+        "x": 0,
+        "y": 0
+      },
+      "viewportCells": {
+        "columns": 80,
+        "rows": 30
+      }
+    },
+    "events": [
+      {
+        "type": "camera-follow",
+        "cursor": {
+          "x": 239,
+          "y": 159
+        }
+      }
+    ],
+    "expect": {
+      "camera": {
+        "x": 160,
+        "y": 130
+      }
+    }
+  },
+  {
+    "id": "camera.follow-threshold",
+    "requires": [
+      "V1"
+    ],
+    "setup": {
+      "camera": {
+        "x": 0,
+        "y": 0
+      },
+      "viewportCells": {
+        "columns": 80,
+        "rows": 30
+      }
+    },
+    "events": [
+      {
+        "type": "camera-follow",
+        "cursor": {
+          "x": 70,
+          "y": 20
+        }
+      }
+    ],
+    "expect": {
+      "camera": {
+        "x": 7,
+        "y": 0
+      }
+    }
+  },
+  {
+    "id": "camera.oversized",
+    "requires": [
+      "V1"
+    ],
+    "setup": {
+      "camera": {
+        "x": 160,
+        "y": 130
+      },
+      "viewportCells": {
+        "columns": 300,
+        "rows": 200
+      }
+    },
+    "events": [
+      {
+        "type": "camera-follow",
+        "cursor": {
+          "x": 239,
+          "y": 159
+        }
+      }
+    ],
+    "expect": {
+      "camera": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  {
+    "id": "browser.complete-loop",
+    "requires": [
+      "V2",
+      "B1",
+      "L1",
+      "E4"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "w"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      },
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      },
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "4"
+      },
+      {
+        "type": "key",
+        "key": "l"
+      },
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "r"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      },
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      },
+      {
+        "type": "elapsed",
+        "ms": 40000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "kind": "well",
+          "mana": 2000,
+          "link": "a02"
+        },
+        "a02": {
+          "kind": "ring",
+          "mana": 1000,
+          "produced": 5
+        }
+      },
+      "impCount": 5,
+      "cursor": {
+        "x": 37,
+        "y": 10
+      },
+      "mode": "Normal",
+      "pendingSource": null
+    }
+  }
+]

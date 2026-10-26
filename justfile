@@ -28,7 +28,7 @@ test-browser: build
 preview: build
     bun run preview
 
-verify: contract contract-complete typecheck test test-browser
+verify: first-playable-fixtures contract contract-complete typecheck test test-browser
     benchpress lint
 
 check-nix:
@@ -48,3 +48,7 @@ doctor:
     ploopy --version
     benchpress --version
     gh --version
+
+# Check frozen first-playable authority/examples, without claiming implementation.
+first-playable-fixtures:
+    bun tools/check-first-playable-fixtures.ts

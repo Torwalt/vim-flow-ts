@@ -1,0 +1,95 @@
+[
+  {
+    "id": "world.initial",
+    "requires": [
+      "W1",
+      "W2"
+    ],
+    "setup": {},
+    "events": [],
+    "expect": {
+      "width": 240,
+      "height": 160,
+      "cursor": {
+        "x": 13,
+        "y": 10
+      },
+      "mode": "Normal",
+      "count": 0,
+      "pendingSource": null,
+      "siteCount": 8,
+      "impCount": 0,
+      "siteAtCursor": "a01",
+      "glyphs": [
+        {
+          "x": 8,
+          "y": 8,
+          "value": "a"
+        },
+        {
+          "x": 13,
+          "y": 10,
+          "value": "+"
+        },
+        {
+          "x": 0,
+          "y": 0,
+          "value": "#"
+        },
+        {
+          "x": 8,
+          "y": 60,
+          "value": "~"
+        }
+      ]
+    }
+  },
+  {
+    "id": "world.far-target",
+    "requires": [
+      "W2"
+    ],
+    "setup": {
+      "cursor": {
+        "x": 234,
+        "y": 158
+      }
+    },
+    "events": [],
+    "expect": {
+      "siteAtCursor": "z02"
+    }
+  },
+  {
+    "id": "world.outside-site",
+    "requires": [
+      "W2"
+    ],
+    "setup": {
+      "cursor": {
+        "x": 19,
+        "y": 8
+      }
+    },
+    "events": [],
+    "expect": {
+      "siteAtCursor": null
+    }
+  },
+  {
+    "id": "world.boundary-site",
+    "requires": [
+      "W2"
+    ],
+    "setup": {
+      "cursor": {
+        "x": 18,
+        "y": 14
+      }
+    },
+    "events": [],
+    "expect": {
+      "siteAtCursor": "a01"
+    }
+  }
+]

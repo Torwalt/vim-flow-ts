@@ -1,0 +1,717 @@
+[
+  {
+    "id": "link.exact-sequence",
+    "requires": [
+      "L1",
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      },
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "4"
+      },
+      {
+        "type": "key",
+        "key": "l"
+      },
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 37,
+        "y": 10
+      },
+      "mode": "Normal",
+      "pendingSource": null,
+      "sites": {
+        "a01": {
+          "link": "a02"
+        }
+      }
+    }
+  },
+  {
+    "id": "link.staged-only",
+    "requires": [
+      "L1",
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": "a01",
+      "sites": {
+        "a01": {
+          "link": null,
+          "mana": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "link.destination-escape",
+    "requires": [
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ],
+      "cursor": {
+        "x": 37,
+        "y": 10
+      },
+      "pendingSource": "a01"
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": "a01",
+      "sites": {
+        "a01": {
+          "link": null
+        }
+      }
+    }
+  },
+  {
+    "id": "link.normal-cancel",
+    "requires": [
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ],
+      "pendingSource": "a01"
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "Escape"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": null,
+      "sites": {
+        "a01": {
+          "link": null
+        }
+      }
+    }
+  },
+  {
+    "id": "link.blur-never-arms",
+    "requires": [
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "blur"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": null,
+      "commandBuffer": "",
+      "sites": {
+        "a01": {
+          "link": null
+        }
+      }
+    }
+  },
+  {
+    "id": "link.missing-source",
+    "requires": [
+      "L2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ],
+      "cursor": {
+        "x": 37,
+        "y": 10
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": null,
+      "sites": {
+        "a01": {
+          "link": null
+        }
+      }
+    }
+  },
+  {
+    "id": "link.reconnect",
+    "requires": [
+      "L2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 400,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 300,
+          "produced": 5
+        },
+        {
+          "site": "a03",
+          "kind": "ring",
+          "mana": 200,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "link",
+        "source": "a01",
+        "target": "a03"
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 400,
+          "link": "a03"
+        },
+        "a02": {
+          "mana": 300,
+          "produced": 5
+        },
+        "a03": {
+          "mana": 200,
+          "produced": 0
+        }
+      },
+      "impCount": 5
+    }
+  },
+  {
+    "id": "link.invalid-kind",
+    "requires": [
+      "L2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "link",
+        "source": "a02",
+        "target": "a01"
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "link": null
+        },
+        "a02": {
+          "produced": 0
+        }
+      },
+      "impCount": 0
+    }
+  },
+  {
+    "id": "link.source-survives-menu",
+    "requires": [
+      "I2",
+      "L1"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      },
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "4"
+      },
+      {
+        "type": "key",
+        "key": "l"
+      },
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "r"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      },
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": null,
+      "sites": {
+        "a01": {
+          "link": "a02"
+        },
+        "a02": {
+          "kind": "ring",
+          "produced": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "link.find-escape-retains-source",
+    "requires": [
+      "I2",
+      "N2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ],
+      "pendingSource": "a01"
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "count": 0,
+      "pendingSource": "a01",
+      "sites": {
+        "a01": {
+          "link": null
+        }
+      }
+    }
+  }
+]

@@ -1,8 +1,10 @@
 # vim-flow-ts
 
 The ordinary TypeScript/Bun comparison arm of vim-flow. Read docs/direction.md
-and docs/experiments/comparison.md. Navigation is implemented; evidence is
-recorded in docs/experiments/navigation.md.
+and ../notes/zettelkasten/vim-game-bend-main.md. Navigation is implemented.
+The comparison protocol and execution evidence live in that note's index.
+The shared game authority is `docs/first-playable.md`; the active implementation
+plan is `docs/plans/FIRST_PLAYABLE_EXECUTION.md`.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as

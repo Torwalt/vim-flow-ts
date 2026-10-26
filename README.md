@@ -27,14 +27,20 @@ field. Pending counts and find/go prefixes appear in the status line; Escape and
 browser blur cancel them. There is no editing, time or objective yet. The
 seven-unit plan ran under OpenCode / `deepseek/deepseek-flash`, high effort, with
 no secondary or rescue; evidence and measurements are in
-[`docs/experiments/navigation.md`](docs/experiments/navigation.md).
+[execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).
 
-See [comparison protocol](docs/experiments/comparison.md),
+See [comparison protocol](../notes/zettelkasten/vim-game-bend-comparison-protocol.md),
 [behavior authority](docs/plans/NAVIGATION.md),
-[execution plan](docs/plans/NAVIGATION_EXECUTION.md), and
 [obligation mapping](spec/navigation/obligations.md).
 
 Run Ploopy from this checkout inside tmux. It creates its own worktree and links
-the ignored environment via `.ploopy.toml`. `ploopy status` lists the pending
-plan; `ploopy run --plan NAVIGATION_EXECUTION --detach` starts it when requested.
+the ignored environment via `.ploopy.toml`. `ploopy status` lists open plans.
+The navigation plan is completed and landed.
 On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
+
+## Next implementation
+
+The shared [first-playable game authority](docs/first-playable.md) and
+[Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are prepared.
+They add a full-window ASCII RTS economy with construction, linked mana and
+five stationary imps per ring. These features are planned, not implemented yet.

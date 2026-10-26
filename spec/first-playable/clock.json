@@ -1,0 +1,403 @@
+[
+  {
+    "id": "clock.partial",
+    "requires": [
+      "T1"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 99
+      }
+    ],
+    "expect": {
+      "elapsedTicks": 0,
+      "remainderMs": 99,
+      "sites": {
+        "a02": {
+          "mana": 0,
+          "produced": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "clock.partition",
+    "requires": [
+      "T1"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 99
+      },
+      {
+        "type": "elapsed",
+        "ms": 1
+      },
+      {
+        "type": "elapsed",
+        "ms": 4800
+      },
+      {
+        "type": "elapsed",
+        "ms": 100
+      }
+    ],
+    "expect": {
+      "elapsedTicks": 50,
+      "remainderMs": 0,
+      "sites": {
+        "a02": {
+          "mana": 0,
+          "produced": 1
+        }
+      },
+      "impCount": 1
+    }
+  },
+  {
+    "id": "clock.manual-pause",
+    "requires": [
+      "T2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "p"
+      },
+      {
+        "type": "elapsed",
+        "ms": 10000
+      }
+    ],
+    "expect": {
+      "manualPaused": true,
+      "elapsedTicks": 0,
+      "sites": {
+        "a02": {
+          "produced": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "clock.resume",
+    "requires": [
+      "T2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "p"
+      },
+      {
+        "type": "elapsed",
+        "ms": 10000
+      },
+      {
+        "type": "key",
+        "key": "p"
+      },
+      {
+        "type": "elapsed",
+        "ms": 5000
+      }
+    ],
+    "expect": {
+      "manualPaused": false,
+      "elapsedTicks": 50,
+      "sites": {
+        "a02": {
+          "produced": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "clock.hidden",
+    "requires": [
+      "T2",
+      "I2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "key",
+        "key": "e"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "t"
+      },
+      {
+        "type": "visibility",
+        "hidden": true
+      },
+      {
+        "type": "elapsed",
+        "ms": 60000
+      },
+      {
+        "type": "visibility",
+        "hidden": false
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "pendingSource": null,
+      "commandBuffer": "",
+      "suspended": false,
+      "manualPaused": false,
+      "elapsedTicks": 0,
+      "impCount": 0
+    }
+  },
+  {
+    "id": "clock.manual-choice-survives-hidden",
+    "requires": [
+      "T2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "p"
+      },
+      {
+        "type": "visibility",
+        "hidden": true
+      },
+      {
+        "type": "visibility",
+        "hidden": false
+      },
+      {
+        "type": "elapsed",
+        "ms": 10000
+      }
+    ],
+    "expect": {
+      "manualPaused": true,
+      "elapsedTicks": 0,
+      "impCount": 0
+    }
+  },
+  {
+    "id": "clock.typing-does-not-pause",
+    "requires": [
+      "T2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "i"
+      },
+      {
+        "type": "key",
+        "key": "c"
+      },
+      {
+        "type": "key",
+        "key": "o"
+      },
+      {
+        "type": "key",
+        "key": "n"
+      },
+      {
+        "type": "elapsed",
+        "ms": 5000
+      }
+    ],
+    "expect": {
+      "mode": "Insert",
+      "commandBuffer": "con",
+      "sites": {
+        "a02": {
+          "produced": 1
+        }
+      },
+      "impCount": 1
+    }
+  },
+  {
+    "id": "clock.menu-does-not-pause",
+    "requires": [
+      "T2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "elapsed",
+        "ms": 5000
+      }
+    ],
+    "expect": {
+      "mode": "Build",
+      "sites": {
+        "a02": {
+          "produced": 1
+        }
+      },
+      "impCount": 1
+    }
+  }
+]

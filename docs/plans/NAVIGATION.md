@@ -119,7 +119,7 @@ Final `just contract-complete` checks their actual passing names and integrity.
 Do not edit this authority, comparison protocol or audit tool during execution.
 Equivalent API/test/helper changes are allowed only with concrete evidence,
 old/new formulations, preserved-domain and obligation arguments, independent
-examples, and all checks. Record in docs/experiments/navigation.md and update
+examples, and all checks. Record in ../notes/zettelkasten/vim-game-bend-typescript-navigation.md and update
 the integrity manifest in the same commit. Changing hashes or passing 50 names
 does not establish equivalence. Never weaken behavior, remove an obligation,
 skip/todo/only checks, use fixture-only solutions or change expected examples

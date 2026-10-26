@@ -1,0 +1,222 @@
+[
+  {
+    "id": "build.direct-well",
+    "requires": [
+      "B1",
+      "B2"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "build",
+        "site": "a01",
+        "kind": "well"
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        }
+      },
+      "glyphs": [
+        {
+          "x": 13,
+          "y": 10,
+          "value": "~"
+        }
+      ]
+    }
+  },
+  {
+    "id": "build.menu-not-confirmed",
+    "requires": [
+      "B1",
+      "I1"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      }
+    ],
+    "expect": {
+      "mode": "Build",
+      "menuSelection": "well",
+      "sites": {
+        "a01": {
+          "kind": "empty"
+        }
+      }
+    }
+  },
+  {
+    "id": "build.menu-ring",
+    "requires": [
+      "B1",
+      "I1"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "r"
+      },
+      {
+        "type": "key",
+        "key": "Enter"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "sites": {
+        "a01": {
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      },
+      "glyphs": [
+        {
+          "x": 13,
+          "y": 10,
+          "value": "o"
+        }
+      ]
+    }
+  },
+  {
+    "id": "build.occupied",
+    "requires": [
+      "B2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 140,
+          "link": null
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "build",
+        "site": "a01",
+        "kind": "ring"
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "kind": "well",
+          "mana": 140
+        }
+      }
+    }
+  },
+  {
+    "id": "build.outside",
+    "requires": [
+      "B2"
+    ],
+    "setup": {
+      "cursor": {
+        "x": 19,
+        "y": 8
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "siteAtCursor": null,
+      "siteCount": 8,
+      "buildingCount": 0
+    }
+  },
+  {
+    "id": "build.cancel",
+    "requires": [
+      "B1",
+      "I2"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "r"
+      },
+      {
+        "type": "key",
+        "key": "Escape"
+      }
+    ],
+    "expect": {
+      "mode": "Normal",
+      "buildingCount": 0
+    }
+  },
+  {
+    "id": "build.blocked-confirm",
+    "requires": [
+      "I1"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": " "
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "r"
+      },
+      {
+        "type": "key",
+        "key": "Enter",
+        "blocked": true
+      }
+    ],
+    "expect": {
+      "mode": "Build",
+      "buildingCount": 0
+    }
+  }
+]

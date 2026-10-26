@@ -1,0 +1,361 @@
+[
+  {
+    "id": "nav.word",
+    "requires": [
+      "N1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "w"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 6,
+        "y": 0
+      },
+      "mode": "Normal",
+      "count": 0
+    }
+  },
+  {
+    "id": "nav.punctuation",
+    "requires": [
+      "N1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "w"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 11,
+        "y": 0
+      }
+    }
+  },
+  {
+    "id": "nav.huge-horizontal",
+    "requires": [
+      "N1",
+      "N2"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "l"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 239,
+        "y": 0
+      },
+      "count": 0
+    }
+  },
+  {
+    "id": "nav.huge-vertical",
+    "requires": [
+      "N1",
+      "N2"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "9"
+      },
+      {
+        "type": "key",
+        "key": "j"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 0,
+        "y": 159
+      }
+    }
+  },
+  {
+    "id": "nav.line-target",
+    "requires": [
+      "N1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "G"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 2,
+        "y": 1
+      }
+    }
+  },
+  {
+    "id": "nav.find-insufficient",
+    "requires": [
+      "N1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "2"
+      },
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "z"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 0,
+        "y": 0
+      },
+      "mode": "Normal"
+    }
+  },
+  {
+    "id": "nav.find-space",
+    "requires": [
+      "N1",
+      "I1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "alpha beta ++",
+        "1": "  wall xx x"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": " "
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 5,
+        "y": 0
+      },
+      "mode": "Normal"
+    }
+  },
+  {
+    "id": "nav.find-literal-insert",
+    "requires": [
+      "N1",
+      "I1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "x i p"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "i"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 2,
+        "y": 0
+      },
+      "mode": "Normal"
+    }
+  },
+  {
+    "id": "nav.find-literal-pause",
+    "requires": [
+      "N1",
+      "I1"
+    ],
+    "setup": {
+      "navigationOnly": true,
+      "rows": {
+        "0": "x i p"
+      },
+      "cursor": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "events": [
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "key",
+        "key": "p"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 4,
+        "y": 0
+      },
+      "manualPaused": false
+    }
+  },
+  {
+    "id": "nav.blur-clears-find",
+    "requires": [
+      "N2"
+    ],
+    "setup": {},
+    "events": [
+      {
+        "type": "key",
+        "key": "f"
+      },
+      {
+        "type": "blur"
+      }
+    ],
+    "expect": {
+      "cursor": {
+        "x": 13,
+        "y": 10
+      },
+      "mode": "Normal",
+      "count": 0
+    }
+  }
+]

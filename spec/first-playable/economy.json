@@ -1,0 +1,450 @@
+[
+  {
+    "id": "mana.unlinked-cap",
+    "requires": [
+      "E1",
+      "E2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": null
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 20000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 2000
+        }
+      },
+      "impCount": 0
+    }
+  },
+  {
+    "id": "mana.unfunded-progress",
+    "requires": [
+      "E1",
+      "E3"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 60000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a02": {
+          "mana": 0,
+          "produced": 0
+        }
+      },
+      "impCount": 0
+    }
+  },
+  {
+    "id": "mana.before-first",
+    "requires": [
+      "E1",
+      "E3"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 4900
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 0
+        },
+        "a02": {
+          "mana": 980,
+          "produced": 0
+        }
+      },
+      "impCount": 0
+    }
+  },
+  {
+    "id": "mana.first-imp",
+    "requires": [
+      "E3",
+      "E4"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 5000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a02": {
+          "mana": 0,
+          "produced": 1
+        }
+      },
+      "imps": [
+        {
+          "ring": "a02",
+          "slot": 1,
+          "x": 33,
+          "y": 14
+        }
+      ]
+    }
+  },
+  {
+    "id": "mana.five-imps",
+    "requires": [
+      "E3",
+      "E4"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 25000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 0
+        },
+        "a02": {
+          "mana": 0,
+          "produced": 5
+        }
+      },
+      "imps": [
+        {
+          "ring": "a02",
+          "slot": 1,
+          "x": 33,
+          "y": 14
+        },
+        {
+          "ring": "a02",
+          "slot": 2,
+          "x": 35,
+          "y": 14
+        },
+        {
+          "ring": "a02",
+          "slot": 3,
+          "x": 37,
+          "y": 14
+        },
+        {
+          "ring": "a02",
+          "slot": 4,
+          "x": 39,
+          "y": 14
+        },
+        {
+          "ring": "a02",
+          "slot": 5,
+          "x": 41,
+          "y": 14
+        }
+      ]
+    }
+  },
+  {
+    "id": "mana.capped-backpressure",
+    "requires": [
+      "E2",
+      "E4"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 40000
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 2000
+        },
+        "a02": {
+          "mana": 1000,
+          "produced": 5
+        }
+      },
+      "impCount": 5
+    }
+  },
+  {
+    "id": "mana.two-wells",
+    "requires": [
+      "E2",
+      "E3"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 0,
+          "link": "a03"
+        },
+        {
+          "site": "a02",
+          "kind": "well",
+          "mana": 0,
+          "link": "a03"
+        },
+        {
+          "site": "a03",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 2500
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 0
+        },
+        "a02": {
+          "mana": 0
+        },
+        "a03": {
+          "mana": 0,
+          "produced": 1
+        }
+      },
+      "impCount": 1
+    }
+  },
+  {
+    "id": "mana.ordered-supply",
+    "requires": [
+      "E2"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 500,
+          "link": "a03"
+        },
+        {
+          "site": "a02",
+          "kind": "well",
+          "mana": 500,
+          "link": "a03"
+        },
+        {
+          "site": "a03",
+          "kind": "ring",
+          "mana": 990,
+          "produced": 5
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 100
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 510
+        },
+        "a02": {
+          "mana": 520
+        },
+        "a03": {
+          "mana": 1000,
+          "produced": 5
+        }
+      },
+      "impCount": 5
+    }
+  },
+  {
+    "id": "mana.prefilled-well",
+    "requires": [
+      "E2",
+      "E3"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 2000,
+          "link": "a02"
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 0
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "elapsed",
+        "ms": 200
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 20
+        },
+        "a02": {
+          "mana": 0,
+          "produced": 2
+        }
+      },
+      "impCount": 2
+    }
+  },
+  {
+    "id": "mana.reconnect-capped",
+    "requires": [
+      "L2",
+      "E4"
+    ],
+    "setup": {
+      "buildings": [
+        {
+          "site": "a01",
+          "kind": "well",
+          "mana": 2000,
+          "link": null
+        },
+        {
+          "site": "a02",
+          "kind": "ring",
+          "mana": 0,
+          "produced": 5
+        }
+      ]
+    },
+    "events": [
+      {
+        "type": "link",
+        "source": "a01",
+        "target": "a02"
+      },
+      {
+        "type": "elapsed",
+        "ms": 100
+      }
+    ],
+    "expect": {
+      "sites": {
+        "a01": {
+          "mana": 1000
+        },
+        "a02": {
+          "mana": 1000,
+          "produced": 5
+        }
+      },
+      "impCount": 5
+    }
+  }
+]
