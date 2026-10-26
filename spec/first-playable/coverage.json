@@ -1,6 +1,10 @@
 {
   "authority": "docs/first-playable.md",
   "corpus": "spec/first-playable",
+  "notes": [
+    "N1/N2 use a 240x160 generalized navigation engine in src/core/game-navigation.ts behind game.dispatch; spec/navigation and the original 40x20 exports/tests are unchanged.",
+    "Navigation states are constructed and driven through game.scenario and game.dispatch, not private state casts."
+  ],
   "requirements": {
     "W1": {
       "status": "active",
@@ -30,8 +34,41 @@
       "tests": ["tests/core/first-playable-world.test.ts"],
       "cases": ["world.initial", "world.far-target", "world.outside-site", "world.boundary-site"]
     },
-    "N1": { "status": "pending", "unit": "2.2", "cases": [] },
-    "N2": { "status": "pending", "unit": "2.2", "cases": [] },
+    "N1": {
+      "status": "active",
+      "unit": "2.2",
+      "exports": [
+        "game.scenario",
+        "game.dispatch",
+        "game.observe",
+        "game.field",
+        "game.glyphAt"
+      ],
+      "tests": ["tests/core/first-playable-navigation.test.ts"],
+      "cases": [
+        "nav.word",
+        "nav.punctuation",
+        "nav.huge-horizontal",
+        "nav.huge-vertical",
+        "nav.line-target",
+        "nav.find-insufficient",
+        "nav.find-space",
+        "nav.find-literal-insert",
+        "nav.find-literal-pause"
+      ]
+    },
+    "N2": {
+      "status": "active",
+      "unit": "2.2",
+      "exports": [
+        "game.scenario",
+        "game.dispatch",
+        "game.observe",
+        "game.field"
+      ],
+      "tests": ["tests/core/first-playable-navigation.test.ts"],
+      "cases": ["nav.huge-horizontal", "nav.huge-vertical", "nav.blur-clears-find"]
+    },
     "V1": { "status": "pending", "unit": "3.1", "cases": [] },
     "V2": { "status": "pending", "unit": "7.1", "cases": [] },
     "B1": { "status": "pending", "unit": "4.1", "cases": [] },

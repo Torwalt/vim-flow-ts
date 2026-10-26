@@ -1,4 +1,6 @@
-import { printable } from "../../spec/navigation/helpers";
+import type { Mode } from "../../spec/navigation/api";
+import { character, printable } from "../../spec/navigation/helpers";
+import { createNavigation } from "./game-navigation";
 
 export const WORLD_WIDTH = 240;
 export const WORLD_HEIGHT = 160;
@@ -101,10 +103,15 @@ interface SiteDefinition {
 interface InternalWorld {
   readonly navigationOnly: boolean;
   readonly cursor: Cursor;
+  readonly mode: Mode;
   readonly buildings: ReadonlyMap<SiteId, Building>;
   readonly pendingSource: SiteId | null;
   readonly navRows: readonly string[] | null;
 }
+
+export type GameEvent =
+  | { readonly type: "key"; readonly key: string; readonly blocked?: boolean }
+  | { readonly type: "blur" };
 
 const SITE_DEFINITIONS: readonly SiteDefinition[] = [
   { id: "a01", x: 8, y: 8 },
@@ -127,6 +134,11 @@ const MAX_WELL_MANA = 2000;
 const MAX_RING_MANA = 1000;
 const MAX_IMPS = 5;
 const worldSize = WORLD_WIDTH * WORLD_HEIGHT;
+const navigation = createNavigation({ columns: WORLD_WIDTH, rows: WORLD_HEIGHT });
+
+function normalMode(): Mode {
+  return { $: "Normal", count: 0 };
+}
 
 const store = new WeakMap<World, InternalWorld>();
 const fieldCache = new WeakMap<World, string>();
@@ -136,6 +148,7 @@ function construct(data: InternalWorld): World {
   store.set(world, Object.freeze({
     ...data,
     cursor: Object.freeze({ ...data.cursor }),
+    mode: Object.freeze({ ...data.mode }),
     buildings: new Map(data.buildings),
     navRows: data.navRows === null ? null : Object.freeze([...data.navRows]),
   }));
@@ -248,7 +261,7 @@ function parseScenario(spec: unknown): InternalWorld {
     const source = buildings.get(pendingSource);
     if (!source || source.kind !== "well") fail(`pendingSource ${pendingSource} must name a built well`);
   }
-  return { navigationOnly, cursor: position, buildings, pendingSource, navRows };
+  return { navigationOnly, cursor: position, mode: normalMode(), buildings, pendingSource, navRows };
 }
 
 function put(cells: string[], x: number, y: number, text: string): void {
@@ -363,6 +376,30 @@ export function snapshot(world: World): Scenario {
   };
 }
 
+export function dispatch(world: World, event: GameEvent): World {
+  const state = data(world);
+  if (event.type === "blur") {
+    return construct({ ...state, mode: normalMode(), pendingSource: null });
+  }
+  if (event.type !== "key") throw new Error("Unsupported game event.");
+  if (event.blocked === true) return world;
+  if (event.key === "Escape") {
+    return construct({
+      ...state,
+      mode: normalMode(),
+      pendingSource: state.mode.$ === "Normal" ? null : state.pendingSource,
+    });
+  }
+  const from = navigation.position(state.cursor);
+  const next = navigation.step(text(world), from, state.mode, character(event.key));
+  if (
+    next.position === from
+    && next.mode.$ === state.mode.$
+    && next.mode.count === state.mode.count
+  ) return world;
+  return construct({ ...state, cursor: navigation.cursor(next.position), mode: next.mode });
+}
+
 export function observe(world: World): Observation {
   const state = data(world);
   const sites: Partial<Record<SiteId, SiteObservation>> = {};
@@ -388,8 +425,8 @@ export function observe(world: World): Observation {
     width: WORLD_WIDTH,
     height: WORLD_HEIGHT,
     cursor: { ...state.cursor },
-    mode: "Normal",
-    count: 0,
+    mode: state.mode.$,
+    count: state.mode.count,
     pendingSource: state.pendingSource,
     menuSelection: null,
     commandBuffer: "",

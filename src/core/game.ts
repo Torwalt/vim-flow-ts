@@ -1,9 +1,10 @@
-import { field, glyphAt, imps, initial, observe, scenario, siteAt, snapshot } from "./world";
+import { dispatch, field, glyphAt, imps, initial, observe, scenario, siteAt, snapshot } from "./world";
 
 export type {
   Building,
   BuildingSetup,
   Cursor,
+  GameEvent,
   GlyphField,
   Imp,
   ImpSlot,
@@ -30,6 +31,7 @@ export const game = {
   scenario,
   snapshot,
   observe,
+  dispatch,
   siteAt,
   glyphAt,
   field,
