@@ -99,6 +99,31 @@
         "reasoning": 29595,
         "cache_read": 3589248
       }
+    },
+    "4.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T00:10:18+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "75dc78b26a22140dccb5eec4118d3171b5ad7e49",
+      "commits": [
+        "4bb925408f474b0a3010c4ebaf74609ec972ae03 Build wells and rings from the keyboard menu"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 4.1\n\n**What landed**\n- `4bb9254` — Leader/Build modes, targeted-site capture, `w`/`r` selection, Enter construction, Escape cancellation, pure `game.build` and side-effect-free `game.preview`.\n- Core observation adds `buildTarget` and `notice`; the browser HUD shows contextual build status and the canvas draws preview glyphs from the core composition.\n- Activated B1/B2/I1, construction.json and browser construction coverage. Updated README, workbench pointer and cumulative coverage assertions.\n- Baseline receipt remains unit 1.1 / `7e332f1`: 50 navigation obligations and the original 40x20 contracts are unchanged. This unit adds 19 core tests (159 total) and 4 browser tests per project (52 total). Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort. No usage/cost metrics were available; none invented.\n\n**Checks**\n- `direnv exec . just verify`: green (fixtures 53/18, 50 named navigation checks, typecheck, 159 core tests, 52 browser tests across development+production, benchpress historical-link warning only).\n- `direnv exec . just test`: green, 159 pass.\n\n**Landmark drift**\n- All named landmarks exist. The construction browser suite is new at `tests/browser/construction.spec.ts`; it reuses the existing fixture and viewport assumptions.\n- The new public preview/build exports are `game.preview` and `game.build`; mode-specific construction state stays private in `src/core/world.ts`.\n\n**Deviations from the work order**\n- Added `buildTarget` and `notice` to the observation surface so preview/error context is observable without reading private state; the corpus ignores these extra fields.\n- Preview is a hypothetical core composition: it returns the real field unchanged when the target is occupied or the world is navigation-only.\n- Direct `build` events apply only the pure build transition and leave mode/menu alone; keyboard Enter wraps the same transition and always returns Normal.\n- `i`, Insert drafts and `p` pause remain unimplemented as the unit says; later units must extend dispatch before invoking the navigation parser.\n\n**What the next session must know**\n- `GameMode` is now `Mode | Leader | Build`; only the four navigation modes may enter `navigation.step`.\n- Build preserves `pendingSource` on open/select/confirm/cancel. Normal Escape clears it; blur clears everything.\n- Occupied confirmation returns Normal with a notice and no mutation; blocked keys are strict identity even in Build.\n- Punctuation preview glyphs can lack full-color pixels, so browser pixel checks sample the thick `WELL`/`RING` label row instead.\n- Browser datasets now expose `buildingCount`, `menuSelection`, `buildTarget` and `notice` alongside the existing camera/cursor fields.\n\n**Open problems**\n- The later units still own typed `connect`, links/arrows, economy ticks, imps, elapsed time and visibility suspension.\n- `notice` is transient UI text and is not part of snapshot/scenario roundtrips; menu state is also not snapshotted.\n- Preview intentionally shows nothing for occupied sites until Enter reports the error; there is no separate invalid-preview warning.",
+      "session_id": "ses_e858aea7cffeQ58AeeqF6K1JBz",
+      "cost_usd": 0.062993328,
+      "harness": "opencode",
+      "elapsed_s": 364,
+      "session_s": 354,
+      "verify_s": 9,
+      "test_s": 1,
+      "tokens": {
+        "input": 98648,
+        "output": 20183,
+        "reasoning": 22645,
+        "cache_read": 7499776
+      }
     }
   }
 }
