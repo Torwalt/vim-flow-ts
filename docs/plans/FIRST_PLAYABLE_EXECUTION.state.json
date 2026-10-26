@@ -149,6 +149,31 @@
         "reasoning": 24401,
         "cache_read": 4785152
       }
+    },
+    "6.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T00:19:57+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "abb52e21514f9397490ea173076102854ce55be0",
+      "commits": [
+        "4ba7a5a592dade89cd8d09b26d06ce212c282516 Advance mana on exact ticks and summon ordered imps"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 6.1\n\n**What landed**\n- `4ba7a5a` — pure economy/clock core: 100 ms ticks with a 0..99 ms remainder, well generation/saturation, ascending-ID transfer, exact summon spending, ordered stationary imps capped at five, manual pause and hidden suspension. `GameEvent` now carries `elapsed` and `visibility`; Normal `p` toggles pause and clears count.\n- Activated E1–E4/T1–T2 in `coverage.json` with every economy/clock case and a new `tests/core/first-playable-economy.test.ts` containing hand-worked examples, a deterministic independent tick model over 40 varied worlds, pause/draft/menu checks, partition equivalence and constructor/roundtrip validation.\n- Updated README and the workbench progress pointer. Checks: `direnv exec . just verify` green (53 fixtures/18 IDs, 50 contract checks, typecheck, 209 core tests, 58 browser tests across development+production); `direnv exec . just test` green, 209 pass. Benchpress reports only the pre-existing missing external notes link.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort. No usage or cost metrics were available; none invented.\n\n**Landmark drift**\n- No named landmark moved. New public exports are `game.advance` plus `TICK_MS`, `WELL_GENERATION`, `WELL_MANA_CAP`, `RING_MANA_CAP`, `SUMMON_COST` and `IMP_CAP`; private `generate`/`transfer`/`summon`/`tick` live in `src/core/world.ts`.\n- `Scenario` and `snapshot` now carry `manualPaused`, `suspended`, `elapsedTicks` and `remainderMs`; previous W1 roundtrips still pass.\n- `GameEvent` gained `{type:\"elapsed\", ms}` and `{type:\"visibility\", hidden}`; `game.advance` is the direct API behind the elapsed event.\n\n**Deviations from the work order**\n- Added explicit clock fields to the scenario/snapshot factory so advanced, paused and suspended states roundtrip through real constructors; the corpus still defaults them to zero.\n- Exported the fixed economy constants from the core instead of duplicating tuning numbers in tests.\n- Left browser scheduling untouched, as the work order assigns live time forwarding to the next unit.\n\n**What the next session must know**\n- Each tick is generation, then transfer in ascending well order, then summoning in ascending ring order. A funded uncapped ring can spawn on the same tick it receives its final quanta; a capped ring never spends.\n- `game.advance` returns the identical world when manually paused or hidden. Entering/leaving pause or hidden resets the remainder to zero; blur does not pause or reset it.\n- `p` only acts in navigation Normal (not Find/Go/Leader/Build/Insert), so a paused draft is resumed by Escape then `p`.\n- Snapshot/scenario roundtrip now includes clock state; scenarios reject unsafe/non-integer elapsed and out-of-range remainder.\n- Browser `main.ts` still forwards visibility changes as `blur` and has no monotonic clock loop. Unit 7.1 must send real `elapsed`/`visibility` events and keep rendering from `game.observe`, with no mana/production calculation in the browser.\n- `browser.complete-loop` remains unregistered with V2 pending.\n\n**Open problems**\n- Large safe elapsed values are simulated tick-by-tick in core; there is no closed-form fast path. Unsafe integers are rejected rather than rounded. Browser frame deltas are small, so this is only a theoretical jump-responsiveness risk.\n- Scenario construction does not forbid a paused/suspended state with a nonzero remainder, although such a state is unreachable through transitions and snapshot always emits zero.",
+      "session_id": "ses_e8580b0faffeMP73XCudu7DLG2",
+      "cost_usd": 0.043396271999999986,
+      "harness": "opencode",
+      "elapsed_s": 273,
+      "session_s": 262,
+      "verify_s": 10,
+      "test_s": 1,
+      "tokens": {
+        "input": 73692,
+        "output": 19422,
+        "reasoning": 16893,
+        "cache_read": 3517824
+      }
     }
   }
 }
