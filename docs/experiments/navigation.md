@@ -17,6 +17,7 @@ metrics remain unavailable. A finite test pass is not a proof.
 | 3.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, typecheck, 37 core tests, 2 browser tests, benchpress lint; the active contract file reports 18 named checks (nine model, five axis plus four words) | No failed approach or manual assistance. `registerWords({ ...model, ...words })` was appended after the axis group; all earlier groups stayed active. No interface revision was needed. Hand-working the expected punctuation and row-split destinations needed care because starts and ends fall on different cells of the same run. |
 | 4.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 49 core tests, 2 browser tests, benchpress lint; the active contract file reports 24 named checks (nine model, five axis, four words plus six lines) | No failed approach or manual assistance. `registerLines({ ...model, ...lines })` was appended after the words group; all earlier groups stayed active. No interface revision was needed. |
 | 5.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 59 core tests, 2 browser tests, benchpress lint; the active contract file reports 27 named checks (nine model, five axis, four words, six lines plus three find) | No failed approach or manual assistance. `registerFind({ ...model, ...find })` was appended after the lines group; all earlier groups stayed active. No interface revision was needed. One independent row-boundary expectation was initially hand-worked as crossing into the previous row and corrected by re-reading the strict same-row rule before the suite ran. |
+| 6.1 | This commit (implementation, complete API assembly, contract registration, sequence tests, harness fix and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify`, `direnv exec . just test` and `nix develop --command just contract-complete` green: contract integrity, typecheck, 91 core tests, 2 browser tests, benchpress lint; `just contract-complete` reports all 50 named checks | No failed implementation approach or manual assistance. `registerAll(actualApi)` replaced the six individual registrations exactly once. The `contract-complete` recipe now clears Bun's AI-agent environment markers before invoking the unchanged audit tool because Bun hides passing test names when `AGENT=1`, which made the name audit fail even with 50 passes. Three hand-worked word/find expectations were corrected after the first test run: small `w` starts a punctuation run, counted find ranks accumulate rather than restart. |
 
 **Unit 1.1 representation notes.** `Field` is a normalized 800-cell ASCII string
 at runtime, branded at the type level so ordinary strings cannot be passed as a
@@ -90,3 +91,30 @@ continuous run crossing the row boundary, insufficient ranks, zero, and huge
 ranks. The first hand-worked boundary example wrongly expected a backward find
 from column zero to cross into the previous row; re-reading the strict same-row
 rule corrected it to the original position before the suite ran.
+
+**Unit 6.1 parser notes.** `input.step` is a small total transition function over
+the four observable modes; it reads `state` only through `model.view`-equivalent
+public fields and returns a fresh `model.pack` copy, so the supplied state is
+never mutated and field identity/content is preserved. Normal digits 1–9 start
+or extend a count through the supplied `appendCount`, which saturates at 9999;
+an unextended `0` executes the zero-column motion, while a `0` with a pending
+count extends it. Relative motions use `effective(count)` (zero becomes one),
+`^` ignores its count, and `$`/`G` pass the raw observable count to `lineMove`,
+which already encodes absent-count semantics. Every completed motion, failed
+find, unsupported Normal key and `g` cancellation returns Normal count zero.
+`f`/`F` open their mode with `max(1, count)`; the next printable code point is
+literal, so spaces, digits, motion keys and `g` are targets, and a miss keeps the
+cursor. `g` opens Go with the pending count; `gg` executes `lineMove("first")`,
+while any other printable in Go is consumed and only resets the grammar. Blocked
+channels, `Other`, and characters outside printable ASCII are identities before
+mode dispatch, so prefixes survive modifier chords and nonprintable input.
+Unblocked Escape resets only the grammar and count. Independent sequence tests
+in `tests/core/navigation-input.test.ts` hand-work `10j`, `99999l`, zero
+disambiguation, `2W`, `2w`, counted `e`/`E`/`b`/`B`, all line keys, literal and
+counted finds (including `0`, space, `f` and `x` targets), `gg`/`nG`, `g`
+cancellation, Escape, blocked modifiers and nonprintable input on a purpose-built
+five-row field. The run exposed an interface issue rather than a behavior defect:
+Bun 1.3.13 suppresses passing test names when it detects `AGENT=1`, so the
+unchanged contract audit could not see the 50 names. The `contract-complete`
+just recipe now runs the same audit under `env -u AGENT -u CLAUDECODE -u REPL_ID`;
+the audit tool and contract files are untouched.

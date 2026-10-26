@@ -11,7 +11,7 @@ contract:
     bun tools/check-navigation-contract.ts
 
 contract-complete:
-    bun tools/check-navigation-contract.ts --complete
+    env -u AGENT -u CLAUDECODE -u REPL_ID bun tools/check-navigation-contract.ts --complete
 
 typecheck:
     bun run typecheck
