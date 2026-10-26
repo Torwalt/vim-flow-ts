@@ -48,6 +48,30 @@
         "reasoning": 3820,
         "cache_read": 615168
       }
+    },
+    "3.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:11:17+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "9268635e724788461220a9dac7c2e908896a1723",
+      "commits": [
+        "9dae21641f6e1147a68db9bb27bc03e03ebfadf9 Add counted word and WORD navigation"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 3.1\n\n**What landed**\n- `9dae216` — `src/core/words.ts` implements `WordsApi.wordMove`; `src/core/navigation.ts`\n  exports `words`, `WordsApi` and `WordMotion`; the contract file appends\n  `registerWords({ ...model, ...words })`; `tests/core/navigation-words.test.ts`\n  adds independent punctuation, row-split, all-space and singleton examples plus\n  count anchoring and huge-count termination. The same commit records selection\n  and termination notes in `docs/experiments/navigation.md`.\n\n**Landmark drift**\n- None. `registerWords` in checks.ts, the model/axis entries and the word types\n  in `spec/navigation/api.ts` matched the plan.\n\n**Deviations from the work order**\n- None. The words group was registered alongside the earlier groups without\n  changing them. Evidence is in the same commit, not a separate evidence commit.\n\n**What the next session must know**\n- `src/core/navigation.ts` is still the stable cumulative entry. Do not remove\n  `model`, `axis` or `words` when adding lines or find.\n- `src/core/words.ts` reuses the supplied `candidate` predicate and scans from\n  the cursor outward: downward for backward, upward for forward/end. The first\n  hit is therefore the nearest and matches `wordSelected` exactly. `size` from\n  helpers is 800.\n- Fallbacks are position 0 for backward and position 799 for forward/end. They\n  are fixed points: `wordMove` returns as soon as a step leaves the destination\n  unchanged, so huge bigint counts (including 10^30) terminate without numeric\n  conversion. Zero returns the original position.\n- Row boundaries are handled by `candidate` itself (column 0 starts and column\n  39 ends a run); no extra split logic is needed. End is strict after the\n  cursor, so at an end cell the next step moves on or falls back to 799.\n- Independent expected destinations are hand-worked in\n  `tests/core/navigation-words.test.ts`; keep that style for lines and find.\n- Do not edit `spec/navigation/*`; no manifest change was needed.\n- `just contract-complete` remains for unit 6. Do not switch to `registerAll`.\n\n**Open problems**\n- None for unit 3.1. `direnv exec . just verify` is green: contract integrity,\n  typecheck, 37 core tests (18 active contract checks), 2 browser tests and\n  benchpress lint. No lines, find, input or browser navigation was implemented,\n  by design.",
+      "session_id": "ses_e85f3a22affeYZv91EAj6FLekV",
+      "cost_usd": 0.013117590000000002,
+      "harness": "opencode",
+      "elapsed_s": 85,
+      "session_s": 82,
+      "verify_s": 3,
+      "tokens": {
+        "input": 24229,
+        "output": 5145,
+        "reasoning": 7086,
+        "cache_read": 714880
+      }
     }
   }
 }
