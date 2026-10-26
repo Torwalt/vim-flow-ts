@@ -1,0 +1,50 @@
+{
+  "authority": "docs/first-playable.md",
+  "corpus": "spec/first-playable",
+  "requirements": {
+    "W1": {
+      "status": "active",
+      "unit": "2.1",
+      "exports": [
+        "game.initial",
+        "game.scenario",
+        "game.snapshot",
+        "game.observe",
+        "game.field",
+        "game.glyphAt"
+      ],
+      "tests": ["tests/core/first-playable-world.test.ts"],
+      "cases": ["world.initial"]
+    },
+    "W2": {
+      "status": "active",
+      "unit": "2.1",
+      "exports": [
+        "game.initial",
+        "game.observe",
+        "game.siteAt",
+        "game.glyphAt",
+        "game.field",
+        "game.imps"
+      ],
+      "tests": ["tests/core/first-playable-world.test.ts"],
+      "cases": ["world.initial", "world.far-target", "world.outside-site", "world.boundary-site"]
+    },
+    "N1": { "status": "pending", "unit": "2.2", "cases": [] },
+    "N2": { "status": "pending", "unit": "2.2", "cases": [] },
+    "V1": { "status": "pending", "unit": "3.1", "cases": [] },
+    "V2": { "status": "pending", "unit": "7.1", "cases": [] },
+    "B1": { "status": "pending", "unit": "4.1", "cases": [] },
+    "B2": { "status": "pending", "unit": "4.1", "cases": [] },
+    "I1": { "status": "pending", "unit": "4.1", "cases": [] },
+    "I2": { "status": "pending", "unit": "5.1", "cases": [] },
+    "L1": { "status": "pending", "unit": "5.1", "cases": [] },
+    "L2": { "status": "pending", "unit": "5.1", "cases": [] },
+    "E1": { "status": "pending", "unit": "6.1", "cases": [] },
+    "E2": { "status": "pending", "unit": "6.1", "cases": [] },
+    "E3": { "status": "pending", "unit": "6.1", "cases": [] },
+    "E4": { "status": "pending", "unit": "6.1", "cases": [] },
+    "T1": { "status": "pending", "unit": "6.1", "cases": [] },
+    "T2": { "status": "pending", "unit": "6.1", "cases": [] }
+  }
+}
