@@ -1,4 +1,4 @@
-import { dispatch, field, glyphAt, imps, initial, observe, scenario, siteAt, snapshot } from "./world";
+import { build, dispatch, field, glyphAt, imps, initial, observe, preview, scenario, siteAt, snapshot } from "./world";
 
 export type {
   Building,
@@ -32,6 +32,8 @@ export const game = {
   snapshot,
   observe,
   dispatch,
+  build,
+  preview,
   siteAt,
   glyphAt,
   field,

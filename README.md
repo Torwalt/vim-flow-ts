@@ -27,8 +27,10 @@ Navigation is **implemented and playable**: `h j k l`, `w b e W B E`, `0 ^ $`,
 The game fills the window with a 32px HUD, 12×20 cells, device-pixel-ratio
 backing and an integer-cell camera; pending counts and find/go prefixes appear
 in the HUD, and Escape or browser blur cancel them. The original 40×20
-navigation contract remains checked as a compatibility fixture. There is no
-construction, time or objective yet. The execution plan runs under OpenCode /
+navigation contract remains checked as a compatibility fixture. Space then `f`
+opens the targeted-site Build menu: `w`/`r` choose a well or ring, Enter builds
+it for free, Escape cancels and the core glyphs preview the choice. There are no
+links, economy ticks, imps or objective yet. The execution plan runs under OpenCode /
 `deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
 measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).
@@ -46,5 +48,6 @@ On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
 
 The shared [first-playable game authority](docs/first-playable.md) and
 [Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md) are active. The
-full-window 240×160 world and camera are in place; construction, linked mana,
-stationary imps, menus and simulation time remain planned for later units.
+full-window 240×160 world, camera and free keyboard construction are in place;
+linked mana, stationary imps, typed connection commands and simulation time
+remain planned for later units.

@@ -55,6 +55,8 @@ export interface Observation {
   readonly count: number;
   readonly pendingSource: SiteId | null;
   readonly menuSelection: MenuSelection | null;
+  readonly buildTarget: SiteId | null;
+  readonly notice: string;
   readonly commandBuffer: string;
   readonly manualPaused: boolean;
   readonly suspended: boolean;
@@ -100,17 +102,25 @@ interface SiteDefinition {
   readonly y: number;
 }
 
+type LeaderMode = { readonly $: "Leader"; readonly count: 0 };
+type BuildMode = { readonly $: "Build"; readonly count: 0 };
+type GameMode = Mode | LeaderMode | BuildMode;
+
 interface InternalWorld {
   readonly navigationOnly: boolean;
   readonly cursor: Cursor;
-  readonly mode: Mode;
+  readonly mode: GameMode;
   readonly buildings: ReadonlyMap<SiteId, Building>;
   readonly pendingSource: SiteId | null;
+  readonly menuSelection: MenuSelection | null;
+  readonly buildTarget: SiteId | null;
+  readonly notice: string;
   readonly navRows: readonly string[] | null;
 }
 
 export type GameEvent =
   | { readonly type: "key"; readonly key: string; readonly blocked?: boolean }
+  | { readonly type: "build"; readonly site: SiteId; readonly kind: "well" | "ring" }
   | { readonly type: "blur" };
 
 const SITE_DEFINITIONS: readonly SiteDefinition[] = [
@@ -138,6 +148,18 @@ const navigation = createNavigation({ columns: WORLD_WIDTH, rows: WORLD_HEIGHT }
 
 function normalMode(): Mode {
   return { $: "Normal", count: 0 };
+}
+
+function leaderMode(): LeaderMode {
+  return { $: "Leader", count: 0 };
+}
+
+function buildMode(): BuildMode {
+  return { $: "Build", count: 0 };
+}
+
+function isNavigationMode(mode: GameMode): mode is Mode {
+  return mode.$ === "Normal" || mode.$ === "FindRight" || mode.$ === "FindLeft" || mode.$ === "Go";
 }
 
 const store = new WeakMap<World, InternalWorld>();
@@ -261,7 +283,17 @@ function parseScenario(spec: unknown): InternalWorld {
     const source = buildings.get(pendingSource);
     if (!source || source.kind !== "well") fail(`pendingSource ${pendingSource} must name a built well`);
   }
-  return { navigationOnly, cursor: position, mode: normalMode(), buildings, pendingSource, navRows };
+  return {
+    navigationOnly,
+    cursor: position,
+    mode: normalMode(),
+    buildings,
+    pendingSource,
+    menuSelection: null,
+    buildTarget: null,
+    notice: "",
+    navRows,
+  };
 }
 
 function put(cells: string[], x: number, y: number, text: string): void {
@@ -376,18 +408,124 @@ export function snapshot(world: World): Scenario {
   };
 }
 
+export function build(world: World, site: SiteId, kind: "well" | "ring"): World {
+  const state = data(world);
+  if (!isSiteId(site) || (kind !== "well" && kind !== "ring")) return world;
+  if (state.navigationOnly || state.buildings.has(site)) return world;
+  const buildings = new Map(state.buildings);
+  buildings.set(site, kind === "well"
+    ? { kind: "well", mana: 0, link: null }
+    : { kind: "ring", mana: 0, produced: 0 });
+  return construct({ ...state, buildings });
+}
+
+function leaderStep(world: World, state: InternalWorld, key: string): World {
+  if (!printable(key)) return world;
+  if (key !== "f") {
+    return construct({
+      ...state,
+      mode: normalMode(),
+      menuSelection: null,
+      buildTarget: null,
+      notice: "",
+    });
+  }
+  const target = siteAt(world, state.cursor.x, state.cursor.y);
+  if (target === null) {
+    return construct({
+      ...state,
+      mode: normalMode(),
+      menuSelection: null,
+      buildTarget: null,
+      notice: "No site at cursor",
+    });
+  }
+  return construct({
+    ...state,
+    mode: buildMode(),
+    menuSelection: "well",
+    buildTarget: target,
+    notice: `Build WELL at ${target}`,
+  });
+}
+
+function buildStep(world: World, state: InternalWorld, key: string): World {
+  if (key === "Enter") {
+    const target = state.buildTarget;
+    if (target === null) {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        menuSelection: null,
+        buildTarget: null,
+        notice: "No build target",
+      });
+    }
+    if (state.buildings.has(target)) {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        menuSelection: null,
+        buildTarget: null,
+        notice: `${target} is occupied`,
+      });
+    }
+    const kind = state.menuSelection ?? "well";
+    const next = data(build(world, target, kind));
+    return construct({
+      ...next,
+      mode: normalMode(),
+      menuSelection: null,
+      buildTarget: null,
+      notice: `Built ${kind.toUpperCase()} at ${target}`,
+    });
+  }
+  if (!printable(key)) return world;
+  if (key === "w" || key === "r") {
+    const menuSelection: MenuSelection = key === "w" ? "well" : "ring";
+    return construct({
+      ...state,
+      menuSelection,
+      notice: `Build ${menuSelection.toUpperCase()} at ${state.buildTarget ?? "—"}`,
+    });
+  }
+  return world;
+}
+
 export function dispatch(world: World, event: GameEvent): World {
   const state = data(world);
   if (event.type === "blur") {
-    return construct({ ...state, mode: normalMode(), pendingSource: null });
+    return construct({
+      ...state,
+      mode: normalMode(),
+      pendingSource: null,
+      menuSelection: null,
+      buildTarget: null,
+      notice: "",
+    });
   }
+  if (event.type === "build") return build(world, event.site, event.kind);
   if (event.type !== "key") throw new Error("Unsupported game event.");
   if (event.blocked === true) return world;
   if (event.key === "Escape") {
     return construct({
       ...state,
       mode: normalMode(),
-      pendingSource: state.mode.$ === "Normal" ? null : state.pendingSource,
+      pendingSource: isNavigationMode(state.mode) && state.mode.$ === "Normal" ? null : state.pendingSource,
+      menuSelection: null,
+      buildTarget: null,
+      notice: "",
+    });
+  }
+  if (state.mode.$ === "Leader") return leaderStep(world, state, event.key);
+  if (state.mode.$ === "Build") return buildStep(world, state, event.key);
+  if (state.mode.$ === "Normal" && event.key === " ") {
+    return construct({
+      ...state,
+      mode: leaderMode(),
+      menuSelection: null,
+      buildTarget: null,
+      notice: "Leader: f build",
     });
   }
   const from = navigation.position(state.cursor);
@@ -428,7 +566,9 @@ export function observe(world: World): Observation {
     mode: state.mode.$,
     count: state.mode.count,
     pendingSource: state.pendingSource,
-    menuSelection: null,
+    menuSelection: state.menuSelection,
+    buildTarget: state.buildTarget,
+    notice: state.notice,
     commandBuffer: "",
     manualPaused: false,
     suspended: false,
@@ -458,6 +598,19 @@ export function glyphAt(world: World, x: number, y: number): string {
 
 export function field(world: World): GlyphField {
   return { width: WORLD_WIDTH, height: WORLD_HEIGHT, text: text(world) };
+}
+
+export function preview(world: World, site: SiteId, kind: "well" | "ring"): GlyphField {
+  const state = data(world);
+  if (!isSiteId(site) || (kind !== "well" && kind !== "ring")) return field(world);
+  if (state.navigationOnly || state.buildings.has(site)) return field(world);
+  const definition = SITE_DEFINITIONS.find(candidate => candidate.id === site);
+  if (!definition) return field(world);
+  const cells = Array.from(text(world));
+  drawBuilding(cells, definition, kind === "well"
+    ? { kind: "well", mana: 0, link: null }
+    : { kind: "ring", mana: 0, produced: 0 });
+  return { width: WORLD_WIDTH, height: WORLD_HEIGHT, text: cells.join("") };
 }
 
 export function imps(world: World): readonly Imp[] {

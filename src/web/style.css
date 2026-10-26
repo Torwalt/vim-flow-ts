@@ -64,10 +64,14 @@ body {
 .hud-cursor { margin-left: auto; color: #99a494; }
 .hud-source,
 .hud-draft,
+.hud-notice,
 .hud-clock { color: #73816d; }
+
+.hud-notice { color: #9db38b; }
 
 @media (max-width: 720px) {
   #hud { gap: 10px; padding: 0 8px; }
   .hud-resources,
-  .hud-draft { display: none; }
+  .hud-draft,
+  .hud-notice { display: none; }
 }

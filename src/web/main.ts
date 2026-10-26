@@ -21,6 +21,7 @@ const colors = {
   imp: "#f5c451",
   cursor: "#f5c451",
   cursorGlyph: "#111714",
+  preview: "#8fb3c7",
 };
 
 function required<T extends Element>(selector: string): T {
@@ -47,6 +48,7 @@ const hudMode = document.querySelector<HTMLElement>("#hud-mode");
 const hudCursor = document.querySelector<HTMLElement>("#hud-cursor");
 const hudSource = document.querySelector<HTMLElement>("#hud-source");
 const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
+const hudNotice = document.querySelector<HTMLElement>("#hud-notice");
 const hudClock = document.querySelector<HTMLElement>("#hud-clock");
 
 let state: World = game.initial();
@@ -55,6 +57,15 @@ let viewport: Viewport = { columns: 1, rows: 1 };
 let composing = false;
 
 function describeSite(observation: Observation): { label: string; resources: string } {
+  if (observation.mode === "Build" && observation.buildTarget !== null) {
+    const id = observation.buildTarget;
+    const site = observation.sites[id];
+    const selection = observation.menuSelection?.toUpperCase() ?? "BUILD";
+    return {
+      label: `${id} ${selection} PREVIEW`,
+      resources: `current ${site?.kind ?? "empty"} · Enter build · w well · r ring · Esc cancel`,
+    };
+  }
   const id = observation.siteAtCursor;
   if (id === null) return { label: "no site", resources: "" };
   const site = observation.sites[id];
@@ -125,6 +136,11 @@ function render(): void {
   context.textBaseline = "middle";
 
   const text = game.field(state).text;
+  const previewText = observation.mode === "Build"
+    && observation.buildTarget !== null
+    && observation.menuSelection !== null
+    ? game.preview(state, observation.buildTarget, observation.menuSelection).text
+    : null;
   const { x: cursorX, y: cursorY } = observation.cursor;
   for (let row = 0; row < viewport.rows; row++) {
     const worldRow = camera.y + row;
@@ -133,9 +149,26 @@ function render(): void {
       const worldColumn = camera.x + column;
       if (worldColumn >= WORLD_WIDTH) break;
       if (worldColumn === cursorX && worldRow === cursorY) continue;
-      const glyph = text[worldRow * WORLD_WIDTH + worldColumn] ?? " ";
+      const index = worldRow * WORLD_WIDTH + worldColumn;
+      const glyph = text[index] ?? " ";
       if (glyph === " ") continue;
       drawCell(glyph, column, row, glyph === "i" ? colors.imp : colors.field);
+    }
+  }
+
+  if (previewText !== null) {
+    for (let row = 0; row < viewport.rows; row++) {
+      const worldRow = camera.y + row;
+      if (worldRow >= WORLD_HEIGHT) break;
+      for (let column = 0; column < viewport.columns; column++) {
+        const worldColumn = camera.x + column;
+        if (worldColumn >= WORLD_WIDTH) break;
+        if (worldColumn === cursorX && worldRow === cursorY) continue;
+        const index = worldRow * WORLD_WIDTH + worldColumn;
+        const glyph = previewText[index] ?? " ";
+        if (glyph === " " || glyph === text[index]) continue;
+        drawCell(glyph, column, row, colors.preview);
+      }
     }
   }
 
@@ -154,6 +187,7 @@ function render(): void {
   setText(hudCursor, `${cursorX},${cursorY} · ${camera.x},${camera.y}`);
   setText(hudSource, `source ${observation.pendingSource ?? "—"}`);
   setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
+  setText(hudNotice, observation.notice);
   setText(hudClock, clockLabel(observation));
 
   canvas.dataset.cursorX = String(cursorX);
@@ -171,7 +205,11 @@ function render(): void {
   canvas.dataset.cellHeight = String(CELL_HEIGHT);
   canvas.dataset.dpr = String(ratio);
   canvas.dataset.siteAtCursor = observation.siteAtCursor ?? "";
+  canvas.dataset.buildingCount = String(observation.buildingCount);
   canvas.dataset.pendingSource = observation.pendingSource ?? "";
+  canvas.dataset.menuSelection = observation.menuSelection ?? "";
+  canvas.dataset.buildTarget = observation.buildTarget ?? "";
+  canvas.dataset.notice = observation.notice;
   canvas.dataset.commandBuffer = observation.commandBuffer;
   canvas.dataset.manualPaused = String(observation.manualPaused);
   canvas.dataset.suspended = String(observation.suspended);
