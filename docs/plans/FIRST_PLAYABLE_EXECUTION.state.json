@@ -49,6 +49,31 @@
         "reasoning": 29452,
         "cache_read": 2649600
       }
+    },
+    "2.2": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T23:58:38+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "618223b39771dbe261a091bf2226f630b130ed07",
+      "commits": [
+        "c588f717ba3691e623a9e17e40306c0ddc26934d Navigate the 240x160 world with the existing grammar"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 2.2\n\n**What landed**\n- `c588f71` — generalized pure navigation engine in `src/core/game-navigation.ts`\n  (240x160 layout factory, axis/word/WORD/line/find, grammar parser).\n- `src/core/world.ts` now stores the navigation mode/count, reads the current\n  composed field for every motion, and exposes `game.dispatch` for key/blur.\n- `tests/core/first-playable-navigation.test.ts` runs all 10 navigation.json\n  cases plus independent bounds, row-split, punctuation, blank/malformed field,\n  pending-mode, cancellation, composed-glyph, preservation and fixed-point tests.\n- Coverage activates N1/N2 (9 and 3 cases) with all later IDs still pending.\n\n**Baseline vs new feature**\n- Baseline receipt remains unit 1.1 / `7e332f1`: 50 navigation obligations,\n  92 core and 24 browser tests.\n- This unit adds 24 core tests (131 total). Old 40x20 modules, exports, contract\n  hashes and 50 named checks are untouched. Browser still uses the old facade.\n\n**Checks**\n- `direnv exec . just verify`: green (fixtures 53/18, 50 named navigation checks,\n  typecheck, 131 core tests, 24 browser tests development+production, benchpress\n  lint warning only for the historical missing note link).\n- `direnv exec . just test`: green, 131 pass.\n- Harness/model/provider: OpenCode / `deepseek/deepseek-flash`, high effort.\n  No usage/cost/elapsed figures were exposed; none invented. No timing probe was\n  run or claimed for this unit.\n\n**Landmark drift**\n- All named landmarks (`axis.ts`, `words.ts`, `lines.ts`, `find.ts`, `input.ts`,\n  `spec/navigation/helpers.ts`, the game facade) are present and unchanged.\n- The new generalized engine is a separate private module; it reuses only the\n  dimension-free spec predicates (`printable`, `classify`, `effective`,\n  `appendCount`, `character`).\n\n**Deviations from the work order**\n- Generalized navigation was added beside the old modules rather than refactoring\n  them in place, so the 40x20 compatibility contract stays byte-identical.\n- `GameEvent` currently supports only `{type:\"key\"}` and `{type:\"blur\"}`; later\n  units must extend the union and the dispatch switch.\n- Normal Escape already clears `pendingSource` per shared §5, although full\n  insert/leader cancellation waits for units 4.1/5.1.\n\n**What the next session must know**\n- Drive navigation with `game.dispatch(state, {type:\"key\", key, blocked?})` and\n  `game.dispatch(state, {type:\"blur\"})`. `observe` now reports the real mode and\n  count; `game.field(world).text` is the composed 240x160 glyph input.\n- Pending modes are reached through keys (`f`, `F`, `g`, digits); scenario\n  setup still starts Normal/count 0. Literal `i`, `p` and Space work as find\n  targets (tested), but have no Normal-mode game binding yet.\n- `snapshot` still encodes world configuration only; it does not carry the\n  transient navigation mode/count. Old W1 roundtrip fixtures are unaffected.\n- I1 remains pending even though `nav.find-space`/`nav.find-literal-*` are listed\n  under N1; later I1 work must claim those cases without removing them from N1.\n- Stage 3 must connect the browser to `game.dispatch`; today `src/web/main.ts`\n  still drives the old 40x20 `actualApi`.\n\n**Open problems**\n- If W1's observable roundtrip is meant to include dispatched navigation states,\n  `snapshot`/`scenario` need compatible mode/count fields (and later menu, draft,\n  pause, clock fields). This unit deliberately did not invent that schema.\n- Normal `Space`/`i`/`p` currently behave as unsupported printable input (they\n  clear a count); the Leader, insert and pause bindings are later units.\n- No camera, viewport or world navigation wiring exists in the browser yet.\n- No new timing measurement was made; only finite runtime/property evidence.",
+      "session_id": "ses_e859448a1ffeOtAvIb67dd1J62",
+      "cost_usd": 0.050590812000000006,
+      "harness": "opencode",
+      "elapsed_s": 278,
+      "session_s": 270,
+      "verify_s": 7,
+      "test_s": 1,
+      "tokens": {
+        "input": 76154,
+        "output": 17136,
+        "reasoning": 29076,
+        "cache_read": 3813504
+      }
     }
   }
 }
