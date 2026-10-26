@@ -97,6 +97,31 @@
         "reasoning": 4224,
         "cache_read": 763008
       }
+    },
+    "5.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:14:03+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "475732982b5837af4c49c5de69648fd190f85cbf",
+      "commits": [
+        "c353c06c436ee282279e41aeb741da5ff94ee2f7 Add row-local character find"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 5.1\n\n**What landed**\n- `c353c06` — `src/core/find.ts` implements `FindApi.findMove` by scanning only\n  the cursor's row for the exact nth strict hit; `src/core/navigation.ts`\n  cumulatively exports `find` and `FindApi`;\n  `tests/core/navigation-contract.test.ts` appends\n  `registerFind({ ...model, ...find })`; `tests/core/navigation-find.test.ts`\n  adds independent examples; `docs/experiments/navigation.md` records the rank,\n  absent-count and boundary notes.\n\n**Landmark drift**\n- None. `hit`, `findSelected`, `registerFind`, `FindApi` and the prior cumulative\n  entry matched the plan.\n\n**Deviations from the work order**\n- None. The scan uses the supplied `hit` predicate, compares a bigint rank to\n  the requested count and returns the original position only after the row is\n  exhausted. Evidence is in the same commit, not a separate evidence commit.\n- One hand-worked independent expectation initially treated a backward find from\n  column zero as crossing into the previous row. The strict same-row rule makes\n  it identity; the test was corrected before the suite ran.\n\n**What the next session must know**\n- `src/core/navigation.ts` is still the stable cumulative entry. Do not remove\n  `model`, `axis`, `words`, `lines` or `find` when adding input and the complete\n  API.\n- `findMove` handles only the motion contract. Zero is identity here; the\n  parser's default find count of one belongs to unit 6, as does the literal\n  find-target prefix handling.\n- Strictness and current-cell exclusion come from `hit`: `q \u003e p` for right and\n  `q \u003c p` for left, same row, exact cell equality. A target string that never\n  equals one cell simply misses and preserves the position.\n- The row scan visits at most 40 cells. Rank is a bigint incremented per hit, so\n  `10n ** 30n` and larger ranks are exact and terminate without converting the\n  count to a number. Insufficient ranks return the original position, never the\n  last hit.\n- Row starts and ends are boundaries. A backward find from column zero has no\n  earlier same-row cell even when the previous row ends with the target; a\n  forward find from column 39 has no later same-row cell.\n- Independent examples in `tests/core/navigation-find.test.ts` hand-work\n  repeated/missing targets, current-cell-only matches, spaces as targets,\n  continuous runs across the row boundary, zero, insufficient ranks and huge\n  ranks. Keep that style for input.\n- Do not edit `spec/navigation/*`; no manifest change was needed. The contract\n  file now reports 27 named checks, not all 50.\n- `just contract-complete` remains for unit 6. Keep the individual registrations\n  until then; do not switch to `registerAll` yet.\n- `direnv exec . just verify` and `direnv exec . just test` are green: contract\n  integrity, typecheck, 59 core tests, 2 browser tests and benchpress lint.\n\n**Open problems**\n- None for unit 5.1. No find input grammar, complete `NavigationApi`, browser\n  navigation or timing measurements exist yet, by design.",
+      "session_id": "ses_e85f12d6affejtWnyMAB0ru3QC",
+      "cost_usd": 0.016441836,
+      "harness": "opencode",
+      "elapsed_s": 91,
+      "session_s": 87,
+      "verify_s": 3,
+      "test_s": 1,
+      "tokens": {
+        "input": 36126,
+        "output": 7145,
+        "reasoning": 6040,
+        "cache_read": 1037312
+      }
     }
   }
 }
