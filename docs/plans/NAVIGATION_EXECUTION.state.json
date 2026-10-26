@@ -122,6 +122,31 @@
         "reasoning": 6040,
         "cache_read": 1037312
       }
+    },
+    "6.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-26T22:17:48+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "6682917f559c0e807ff39e9063b0a8456460e135",
+      "commits": [
+        "6b2f5d06a3e5584c9012f335e5f844a1a83f84b1 Interpret counts and pending navigation commands"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 6.1\n\n**What landed**\n- `6b2f5d0` — `src/core/input.ts` implements `InputApi.step` for Normal,\n  FindRight, FindLeft and Go, with count saturation, zero disambiguation,\n  literal find targets, g completion/cancellation, Escape, blocked/Other and\n  nonprintable identities, and field/position preservation.\n- `src/core/navigation.ts` cumulatively exports `input` and assembles\n  `actualApi: NavigationApi\u003cField, State\u003e` from model, axis, words, lines, find\n  and input. `tests/core/navigation-contract.test.ts` now calls\n  `registerAll(actualApi)` exactly once.\n- `tests/core/navigation-input.test.ts` adds hand-worked sequences on a\n  purpose-built five-row field; `docs/experiments/navigation.md` records the\n  parser choices, interface issue and test corrections.\n\n**Landmark drift**\n- None. The completed APIs, `registerAll`, `NavigationApi` and the input\n  contract matched the plan.\n\n**Deviations from the work order**\n- `justfile`'s `contract-complete` recipe now runs the unchanged audit under\n  `env -u AGENT -u CLAUDECODE -u REPL_ID`. Bun 1.3.13 detects `AGENT=1` and\n  suppresses all passing test names, so the name audit failed despite 50\n  passes. The audit tool and spec files are untouched. This is the only\n  non-unit code change; it is required for the named completion check to work\n  under the harness. Evidence is in the same commit, not a separate evidence\n  commit.\n- Three hand-worked expectations were wrong on the first run, not the parser:\n  small `w` lands on the punctuation run start (0 -\u003e 3, then 4), and counted\n  `f x` ranks accumulate (2f from 120 is 128). Corrected before the final run.\n\n**What the next session must know**\n- `actualApi` in `src/core/navigation.ts` is the complete stable entry. Keep it\n  assembled by spread; do not replace it with individual calls in the browser.\n- `input.step` is total over the four modes and returns a fresh `model.pack`\n  copy. It never mutates the supplied state. Blocked and `Other` inputs return\n  the original state before any mode dispatch; nonprintable code points are\n  identities before dispatch too.\n- Pending find stores `max(1, Normal count)`; its next printable code point is\n  literal, including space, digits, `f`, `g` and capital letters. Go stores the\n  raw Normal count (zero possible); only `g` completes it, every other printable\n  is consumed and resets to Normal count zero.\n- `0` is column-zero only when Normal count is zero; otherwise it extends the\n  count via `appendCount`, saturated at 9999. Relative motions use\n  `effective(count)`, `^` ignores count, and `$`/`G` pass the raw count to\n  `lineMove`.\n- `just contract-complete` is green and reports all 50 distinct names. It is not\n  yet part of `just verify`; unit 7 adds it. Keep the recipe's environment\n  unsets or the agent harness will hide the names again.\n- `direnv exec . just verify` and `direnv exec . just test` are green: contract\n  integrity, typecheck, 91 core tests, 2 browser tests, benchpress lint.\n\n**Open problems**\n- None for unit 6.1. Browser capture/drawing and high-count timing remain for\n  unit 7 by design. The `justfile` environment workaround may deserve a note in\n  the final direction documentation, but it does not alter navigation behavior.",
+      "session_id": "ses_e85efca4fffeB5BpJ1R64hKJzX",
+      "cost_usd": 0.036106355999999985,
+      "harness": "opencode",
+      "elapsed_s": 225,
+      "session_s": 221,
+      "verify_s": 3,
+      "test_s": 1,
+      "tokens": {
+        "input": 61066,
+        "output": 9909,
+        "reasoning": 22900,
+        "cache_read": 2420352
+      }
     }
   }
 }
