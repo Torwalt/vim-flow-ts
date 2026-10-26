@@ -14,6 +14,7 @@ metrics remain unavailable. A finite test pass is not a proof.
 | --- | --- | --- | --- | --- | --- |
 | 1.1 | `0ece0a8` and the evidence commit that adds this row | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `nix develop --command just verify` and `direnv exec . just verify` green: contract integrity, typecheck, 17 core tests, 2 browser tests, benchpress lint | No failed approach or manual assistance. Field and State representations were open; the model checks fixed the observable behavior only. No interface revision was needed. |
 | 2.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, typecheck, 27 core tests, 2 browser tests, benchpress lint; the active contract file reports 14 named checks (nine model plus five axis) | No failed approach or manual assistance. `registerAxis(axis)` was appended after `registerModel(model)`; the earlier group stayed active. No interface revision was needed. |
+| 3.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, typecheck, 37 core tests, 2 browser tests, benchpress lint; the active contract file reports 18 named checks (nine model, five axis plus four words) | No failed approach or manual assistance. `registerWords({ ...model, ...words })` was appended after the axis group; all earlier groups stayed active. No interface revision was needed. Hand-working the expected punctuation and row-split destinations needed care because starts and ends fall on different cells of the same run. |
 
 **Unit 1.1 representation notes.** `Field` is a normalized 800-cell ASCII string
 at runtime, branded at the type level so ordinary strings cannot be passed as a
@@ -37,3 +38,17 @@ independent examples in `tests/core/navigation-axis.test.ts` cover zero at row
 starts/ends/interiors, one-past-the-edge counts, huge counts in all four
 directions and the invariant that horizontal moves keep the row while vertical
 moves keep the column.
+
+**Unit 3.1 selection and termination notes.** `wordMove` scans outward from the
+cursor for the nearest supplied `candidate` in the requested direction and
+returns the field's first or last cell when the scan finds none. The scan order
+makes the first hit the minimal forward/end candidate or the maximal backward
+candidate, matching `wordSelected` without storing a destination. Repetition
+uses a bigint counter, so the natural-count domain is not narrowed; after each
+step it returns immediately when the destination is unchanged. A fallback is
+such a fixed point, which bounds work to the 800 cells for every positive count,
+including `Number.MAX_SAFE_INTEGER + 1`, `2n ** 64n` and `10n ** 30n`. Zero
+skips the loop and preserves the position. Independent examples in
+`tests/core/navigation-words.test.ts` hand-work small punctuation runs, a single
+WORD spanning punctuation, row-split runs, all-space and singleton fields, and
+anchor counts to repeated single steps.
