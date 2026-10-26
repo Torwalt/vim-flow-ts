@@ -1,4 +1,6 @@
 import {
+  SITE_HEIGHT,
+  SITE_WIDTH,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   game,
@@ -14,6 +16,7 @@ import {
   type Camera,
   type Viewport,
 } from "./camera";
+import { arrowHead, cellCenter, clipSegment } from "./overlay";
 
 const colors = {
   background: "#111714",
@@ -22,6 +25,9 @@ const colors = {
   cursor: "#f5c451",
   cursorGlyph: "#111714",
   preview: "#8fb3c7",
+  link: "#5d8c9e",
+  linkSelected: "#8fd3c0",
+  source: "#d9a05b",
 };
 
 function required<T extends Element>(selector: string): T {
@@ -111,6 +117,63 @@ function drawCell(glyph: string, column: number, row: number, color: string): vo
   context.fillText(glyph, x, y);
 }
 
+function screenPoint(cell: { readonly x: number; readonly y: number }): { x: number; y: number } {
+  return cellCenter(cell.x - camera.x, cell.y - camera.y, CELL_WIDTH, CELL_HEIGHT);
+}
+
+function drawLinks(observation: Observation, cssWidth: number, cssHeight: number): void {
+  const selected = observation.siteAtCursor;
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const link of observation.links) {
+    const clipped = clipSegment(screenPoint(link.from), screenPoint(link.to), cssWidth, cssHeight);
+    if (!clipped) continue;
+    const highlighted = selected !== null && (link.source === selected || link.target === selected);
+    context.strokeStyle = highlighted ? colors.linkSelected : colors.link;
+    context.lineWidth = highlighted ? 3 : 2;
+    context.beginPath();
+    context.moveTo(clipped.from.x, clipped.from.y);
+    context.lineTo(clipped.to.x, clipped.to.y);
+    context.stroke();
+    const [left, right] = arrowHead(clipped.from, clipped.to, 7);
+    context.beginPath();
+    context.moveTo(left.x, left.y);
+    context.lineTo(clipped.to.x, clipped.to.y);
+    context.lineTo(right.x, right.y);
+    context.stroke();
+  }
+  if (observation.pendingSource !== null && observation.pendingFrom !== null) {
+    const from = screenPoint(observation.pendingFrom);
+    const to = screenPoint(observation.cursor);
+    const clipped = clipSegment(from, to, cssWidth, cssHeight);
+    if (clipped) {
+      context.strokeStyle = colors.source;
+      context.lineWidth = 1.5;
+      context.setLineDash([5, 4]);
+      context.beginPath();
+      context.moveTo(clipped.from.x, clipped.from.y);
+      context.lineTo(clipped.to.x, clipped.to.y);
+      context.stroke();
+      context.setLineDash([]);
+    }
+  }
+  context.restore();
+}
+
+function drawSourceHighlight(observation: Observation): void {
+  if (observation.pendingSource === null || observation.pendingFrom === null) return;
+  const left = (observation.pendingFrom.x - 5 - camera.x) * CELL_WIDTH;
+  const top = (observation.pendingFrom.y - 2 - camera.y) * CELL_HEIGHT;
+  context.save();
+  context.strokeStyle = colors.source;
+  context.lineWidth = 2;
+  context.setLineDash([5, 3]);
+  context.strokeRect(left + 1, top + 1, SITE_WIDTH * CELL_WIDTH - 2, SITE_HEIGHT * CELL_HEIGHT - 2);
+  context.setLineDash([]);
+  context.restore();
+}
+
 function render(): void {
   const observation = game.observe(state);
   const bounds = canvas.getBoundingClientRect();
@@ -134,6 +197,8 @@ function render(): void {
   context.font = '15px "SFMono-Regular", Consolas, "Liberation Mono", monospace';
   context.textAlign = "center";
   context.textBaseline = "middle";
+
+  drawLinks(observation, cssWidth, cssHeight);
 
   const text = game.field(state).text;
   const previewText = observation.mode === "Build"
@@ -172,6 +237,8 @@ function render(): void {
     }
   }
 
+  drawSourceHighlight(observation);
+
   const cursorColumn = cursorX - camera.x;
   const cursorRow = cursorY - camera.y;
   if (cursorColumn >= 0 && cursorColumn < viewport.columns && cursorRow >= 0 && cursorRow < viewport.rows) {
@@ -209,7 +276,11 @@ function render(): void {
   canvas.dataset.pendingSource = observation.pendingSource ?? "";
   canvas.dataset.menuSelection = observation.menuSelection ?? "";
   canvas.dataset.buildTarget = observation.buildTarget ?? "";
+  canvas.dataset.insertSite = observation.insertSite ?? "";
   canvas.dataset.notice = observation.notice;
+  canvas.dataset.links = observation.links.map(link => `${link.source}>${link.target}`).join(",");
+  canvas.dataset.linkCount = String(observation.links.length);
+  canvas.dataset.sourceHighlight = observation.pendingSource ?? "";
   canvas.dataset.commandBuffer = observation.commandBuffer;
   canvas.dataset.manualPaused = String(observation.manualPaused);
   canvas.dataset.suspended = String(observation.suspended);

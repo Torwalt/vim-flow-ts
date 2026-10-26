@@ -1,4 +1,4 @@
-import { build, dispatch, field, glyphAt, imps, initial, observe, preview, scenario, siteAt, snapshot } from "./world";
+import { build, dispatch, field, glyphAt, imps, initial, link, observe, preview, scenario, siteAt, snapshot } from "./world";
 
 export type {
   Building,
@@ -8,6 +8,7 @@ export type {
   GlyphField,
   Imp,
   ImpSlot,
+  LinkObservation,
   MenuSelection,
   Observation,
   Ring,
@@ -33,6 +34,7 @@ export const game = {
   observe,
   dispatch,
   build,
+  link,
   preview,
   siteAt,
   glyphAt,

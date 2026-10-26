@@ -47,6 +47,13 @@ export type SiteObservation =
   | { readonly kind: "well"; readonly mana: number; readonly link: SiteId | null }
   | { readonly kind: "ring"; readonly mana: number; readonly produced: number };
 
+export interface LinkObservation {
+  readonly source: SiteId;
+  readonly target: SiteId;
+  readonly from: Cursor;
+  readonly to: Cursor;
+}
+
 export interface Observation {
   readonly width: number;
   readonly height: number;
@@ -56,6 +63,8 @@ export interface Observation {
   readonly pendingSource: SiteId | null;
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
+  readonly insertSite: SiteId | null;
+  readonly pendingFrom: Cursor | null;
   readonly notice: string;
   readonly commandBuffer: string;
   readonly manualPaused: boolean;
@@ -67,6 +76,7 @@ export interface Observation {
   readonly impCount: number;
   readonly siteAtCursor: SiteId | null;
   readonly sites: Readonly<Partial<Record<SiteId, SiteObservation>>>;
+  readonly links: readonly LinkObservation[];
   readonly imps: readonly Imp[];
 }
 
@@ -104,7 +114,8 @@ interface SiteDefinition {
 
 type LeaderMode = { readonly $: "Leader"; readonly count: 0 };
 type BuildMode = { readonly $: "Build"; readonly count: 0 };
-type GameMode = Mode | LeaderMode | BuildMode;
+type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: SiteId };
+type GameMode = Mode | LeaderMode | BuildMode | InsertMode;
 
 interface InternalWorld {
   readonly navigationOnly: boolean;
@@ -114,6 +125,8 @@ interface InternalWorld {
   readonly pendingSource: SiteId | null;
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
+  readonly insertSite: SiteId | null;
+  readonly draft: string;
   readonly notice: string;
   readonly navRows: readonly string[] | null;
 }
@@ -121,6 +134,7 @@ interface InternalWorld {
 export type GameEvent =
   | { readonly type: "key"; readonly key: string; readonly blocked?: boolean }
   | { readonly type: "build"; readonly site: SiteId; readonly kind: "well" | "ring" }
+  | { readonly type: "link"; readonly source: SiteId; readonly target: SiteId }
   | { readonly type: "blur" };
 
 const SITE_DEFINITIONS: readonly SiteDefinition[] = [
@@ -156,6 +170,10 @@ function leaderMode(): LeaderMode {
 
 function buildMode(): BuildMode {
   return { $: "Build", count: 0 };
+}
+
+function insertMode(site: SiteId): InsertMode {
+  return { $: "Insert", count: 0, site };
 }
 
 function isNavigationMode(mode: GameMode): mode is Mode {
@@ -205,6 +223,14 @@ function isSiteId(value: unknown): value is SiteId {
 function siteId(value: unknown, label: string): SiteId {
   if (!isSiteId(value)) fail(`${label} must name a fixed site`);
   return value;
+}
+
+function siteDefinition(id: SiteId): SiteDefinition | undefined {
+  return SITE_DEFINITIONS.find(site => site.id === id);
+}
+
+function siteCenter(site: SiteDefinition): Cursor {
+  return { x: site.x + 5, y: site.y + 2 };
 }
 
 function cursor(value: unknown): Cursor {
@@ -291,6 +317,8 @@ function parseScenario(spec: unknown): InternalWorld {
     pendingSource,
     menuSelection: null,
     buildTarget: null,
+    insertSite: null,
+    draft: "",
     notice: "",
     navRows,
   };
@@ -419,6 +447,18 @@ export function build(world: World, site: SiteId, kind: "well" | "ring"): World 
   return construct({ ...state, buildings });
 }
 
+export function link(world: World, source: SiteId, target: SiteId): World {
+  const state = data(world);
+  if (!isSiteId(source) || !isSiteId(target) || state.navigationOnly) return world;
+  const well = state.buildings.get(source);
+  const ring = state.buildings.get(target);
+  if (!well || well.kind !== "well" || !ring || ring.kind !== "ring") return world;
+  if (well.link === target) return world;
+  const buildings = new Map(state.buildings);
+  buildings.set(source, { ...well, link: target });
+  return construct({ ...state, buildings });
+}
+
 function leaderStep(world: World, state: InternalWorld, key: string): World {
   if (!printable(key)) return world;
   if (key !== "f") {
@@ -492,6 +532,96 @@ function buildStep(world: World, state: InternalWorld, key: string): World {
   return world;
 }
 
+function insertStep(world: World, state: InternalWorld, key: string): World {
+  const site = state.insertSite;
+  if (site === null) return construct({ ...state, mode: normalMode(), draft: "", insertSite: null, notice: "" });
+  const building = state.buildings.get(site);
+  if (key === "Backspace") {
+    if (state.draft === "") return world;
+    return construct({ ...state, draft: Array.from(state.draft).slice(0, -1).join("") });
+  }
+  if (key === "Escape") {
+    if (building?.kind === "well" && state.draft === "connect") {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        pendingSource: site,
+        insertSite: null,
+        draft: "",
+        notice: `Source ${site}`,
+      });
+    }
+    return construct({
+      ...state,
+      mode: normalMode(),
+      insertSite: null,
+      draft: "",
+      notice: "",
+    });
+  }
+  if (key === "Enter") {
+    if (state.draft !== "connect") {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        insertSite: null,
+        draft: "",
+        notice: `Unknown command ${state.draft === "" ? "—" : state.draft}`,
+      });
+    }
+    if (building?.kind === "well") {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        pendingSource: site,
+        insertSite: null,
+        draft: "",
+        notice: `Source ${site}`,
+      });
+    }
+    if (building?.kind === "ring") {
+      if (state.pendingSource === null) {
+        return construct({
+          ...state,
+          mode: normalMode(),
+          insertSite: null,
+          draft: "",
+          notice: `No source for ${site}`,
+        });
+      }
+      const source = state.buildings.get(state.pendingSource);
+      if (!source || source.kind !== "well") {
+        return construct({
+          ...state,
+          mode: normalMode(),
+          insertSite: null,
+          draft: "",
+          notice: `Invalid source ${state.pendingSource}`,
+        });
+      }
+      const next = data(link(world, state.pendingSource, site));
+      return construct({
+        ...next,
+        mode: normalMode(),
+        pendingSource: null,
+        insertSite: null,
+        draft: "",
+        notice: `Linked ${state.pendingSource} to ${site}`,
+      });
+    }
+    return construct({
+      ...state,
+      mode: normalMode(),
+      insertSite: null,
+      draft: "",
+      notice: `No building at ${site}`,
+    });
+  }
+  if (!printable(key)) return world;
+  if (Array.from(state.draft).length >= 32) return world;
+  return construct({ ...state, draft: state.draft + key });
+}
+
 export function dispatch(world: World, event: GameEvent): World {
   const state = data(world);
   if (event.type === "blur") {
@@ -501,12 +631,16 @@ export function dispatch(world: World, event: GameEvent): World {
       pendingSource: null,
       menuSelection: null,
       buildTarget: null,
+      insertSite: null,
+      draft: "",
       notice: "",
     });
   }
   if (event.type === "build") return build(world, event.site, event.kind);
+  if (event.type === "link") return link(world, event.source, event.target);
   if (event.type !== "key") throw new Error("Unsupported game event.");
   if (event.blocked === true) return world;
+  if (state.mode.$ === "Insert") return insertStep(world, state, event.key);
   if (event.key === "Escape") {
     return construct({
       ...state,
@@ -514,6 +648,8 @@ export function dispatch(world: World, event: GameEvent): World {
       pendingSource: isNavigationMode(state.mode) && state.mode.$ === "Normal" ? null : state.pendingSource,
       menuSelection: null,
       buildTarget: null,
+      insertSite: null,
+      draft: "",
       notice: "",
     });
   }
@@ -526,6 +662,25 @@ export function dispatch(world: World, event: GameEvent): World {
       menuSelection: null,
       buildTarget: null,
       notice: "Leader: f build",
+    });
+  }
+  if (state.mode.$ === "Normal" && event.key === "i") {
+    const target = siteAt(world, state.cursor.x, state.cursor.y);
+    if (target === null) {
+      return construct({ ...state, notice: "No building at cursor" });
+    }
+    const building = state.buildings.get(target);
+    if (!building) {
+      return construct({ ...state, notice: `${target} is empty` });
+    }
+    return construct({
+      ...state,
+      mode: insertMode(target),
+      insertSite: target,
+      draft: "",
+      menuSelection: null,
+      buildTarget: null,
+      notice: `Insert at ${target}: connect`,
     });
   }
   const from = navigation.position(state.cursor);
@@ -541,8 +696,10 @@ export function dispatch(world: World, event: GameEvent): World {
 export function observe(world: World): Observation {
   const state = data(world);
   const sites: Partial<Record<SiteId, SiteObservation>> = {};
+  const links: LinkObservation[] = [];
   let buildingCount = 0;
   let impCount = 0;
+  let pendingFrom: Cursor | null = null;
   if (!state.navigationOnly) {
     for (const site of SITE_DEFINITIONS) {
       const building = state.buildings.get(site.id);
@@ -552,6 +709,16 @@ export function observe(world: World): Observation {
         buildingCount++;
         if (building.kind === "well") {
           sites[site.id] = { kind: "well", mana: building.mana, link: building.link };
+          if (building.link !== null) {
+            const target = siteDefinition(building.link);
+            if (target) links.push({
+              source: site.id,
+              target: building.link,
+              from: siteCenter(site),
+              to: siteCenter(target),
+            });
+          }
+          if (state.pendingSource === site.id) pendingFrom = siteCenter(site);
         } else {
           impCount += building.produced;
           sites[site.id] = { kind: "ring", mana: building.mana, produced: building.produced };
@@ -568,8 +735,10 @@ export function observe(world: World): Observation {
     pendingSource: state.pendingSource,
     menuSelection: state.menuSelection,
     buildTarget: state.buildTarget,
+    insertSite: state.insertSite,
+    pendingFrom,
     notice: state.notice,
-    commandBuffer: "",
+    commandBuffer: state.draft,
     manualPaused: false,
     suspended: false,
     elapsedTicks: 0,
@@ -579,6 +748,7 @@ export function observe(world: World): Observation {
     impCount,
     siteAtCursor: siteAt(world, state.cursor.x, state.cursor.y),
     sites,
+    links,
     imps: impsOf(state),
   };
 }

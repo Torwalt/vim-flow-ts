@@ -90,7 +90,7 @@ test("coverage activates N1 and N2 with every navigation case and leaves later w
   expect(coverage.requirements.N2?.cases?.slice().sort()).toEqual(n2);
   expect(coverage.requirements.V1?.status).toBe("active");
   for (const id of ["B1", "B2", "I1"]) expect(coverage.requirements[id]?.status).toBe("active");
-  for (const id of ["V2", "I2", "L1", "L2", "E1", "E2", "E3", "E4", "T1", "T2"]) {
+  for (const id of ["V2", "E1", "E2", "E3", "E4", "T1", "T2"]) {
     expect(coverage.requirements[id]?.status).toBe("pending");
   }
 });

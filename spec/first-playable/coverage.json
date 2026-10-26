@@ -6,7 +6,8 @@
     "Navigation states are constructed and driven through game.scenario and game.dispatch, not private state casts.",
     "V1 uses the pure 12x20 presentation camera in src/web/camera.ts; browser tests check DPR backing, visible cells, clamping and resize against the real core state.",
     "B1/B2 share one pure game.build empty->well/ring transition; the keyboard menu also uses it and game.preview composes the real target-patch glyphs without mutating the world.",
-    "Build menus preserve pendingSource; blocked keys are identity and blur or Escape cancellation never constructs."
+    "Build menus preserve pendingSource; blocked keys are identity and blur or Escape cancellation never constructs.",
+    "I2/L1/L2 use one pure game.link transition; Insert drafts are bounded to 32 printable characters, keyboard commit/retry/cancel and direct link events share that transition, and browser arrows are presentation overlays over the composed text field."
   ],
   "requirements": {
     "W1": {
@@ -20,8 +21,12 @@
         "game.field",
         "game.glyphAt"
       ],
-      "tests": ["tests/core/first-playable-world.test.ts"],
-      "cases": ["world.initial"]
+      "tests": [
+        "tests/core/first-playable-world.test.ts"
+      ],
+      "cases": [
+        "world.initial"
+      ]
     },
     "W2": {
       "status": "active",
@@ -34,8 +39,15 @@
         "game.field",
         "game.imps"
       ],
-      "tests": ["tests/core/first-playable-world.test.ts"],
-      "cases": ["world.initial", "world.far-target", "world.outside-site", "world.boundary-site"]
+      "tests": [
+        "tests/core/first-playable-world.test.ts"
+      ],
+      "cases": [
+        "world.initial",
+        "world.far-target",
+        "world.outside-site",
+        "world.boundary-site"
+      ]
     },
     "N1": {
       "status": "active",
@@ -47,7 +59,9 @@
         "game.field",
         "game.glyphAt"
       ],
-      "tests": ["tests/core/first-playable-navigation.test.ts"],
+      "tests": [
+        "tests/core/first-playable-navigation.test.ts"
+      ],
       "cases": [
         "nav.word",
         "nav.punctuation",
@@ -69,8 +83,14 @@
         "game.observe",
         "game.field"
       ],
-      "tests": ["tests/core/first-playable-navigation.test.ts"],
-      "cases": ["nav.huge-horizontal", "nav.huge-vertical", "nav.blur-clears-find"]
+      "tests": [
+        "tests/core/first-playable-navigation.test.ts"
+      ],
+      "cases": [
+        "nav.huge-horizontal",
+        "nav.huge-vertical",
+        "nav.blur-clears-find"
+      ]
     },
     "V1": {
       "status": "active",
@@ -92,7 +112,11 @@
         "camera.oversized"
       ]
     },
-    "V2": { "status": "pending", "unit": "7.1", "cases": [] },
+    "V2": {
+      "status": "pending",
+      "unit": "7.1",
+      "cases": []
+    },
     "B1": {
       "status": "active",
       "unit": "4.1",
@@ -125,7 +149,9 @@
         "game.glyphAt",
         "game.field"
       ],
-      "tests": ["tests/core/first-playable-construction.test.ts"],
+      "tests": [
+        "tests/core/first-playable-construction.test.ts"
+      ],
       "cases": [
         "build.direct-well",
         "build.occupied",
@@ -141,21 +167,103 @@
         "game.observe",
         "game.field"
       ],
-      "tests": ["tests/core/first-playable-construction.test.ts"],
+      "tests": [
+        "tests/core/first-playable-construction.test.ts"
+      ],
       "cases": [
         "build.menu-not-confirmed",
         "build.menu-ring",
         "build.blocked-confirm"
       ]
     },
-    "I2": { "status": "pending", "unit": "5.1", "cases": [] },
-    "L1": { "status": "pending", "unit": "5.1", "cases": [] },
-    "L2": { "status": "pending", "unit": "5.1", "cases": [] },
-    "E1": { "status": "pending", "unit": "6.1", "cases": [] },
-    "E2": { "status": "pending", "unit": "6.1", "cases": [] },
-    "E3": { "status": "pending", "unit": "6.1", "cases": [] },
-    "E4": { "status": "pending", "unit": "6.1", "cases": [] },
-    "T1": { "status": "pending", "unit": "6.1", "cases": [] },
-    "T2": { "status": "pending", "unit": "6.1", "cases": [] }
+    "I2": {
+      "status": "active",
+      "unit": "5.1",
+      "exports": [
+        "game.dispatch",
+        "game.scenario",
+        "game.observe",
+        "game.link"
+      ],
+      "tests": [
+        "tests/core/first-playable-connections.test.ts",
+        "tests/browser/connections.spec.ts"
+      ],
+      "cases": [
+        "link.blur-never-arms",
+        "link.destination-escape",
+        "link.exact-sequence",
+        "link.find-escape-retains-source",
+        "link.normal-cancel",
+        "link.source-survives-menu",
+        "link.staged-only"
+      ]
+    },
+    "L1": {
+      "status": "active",
+      "unit": "5.1",
+      "exports": [
+        "game.dispatch",
+        "game.link",
+        "game.observe"
+      ],
+      "tests": [
+        "tests/core/first-playable-connections.test.ts",
+        "tests/browser/connections.spec.ts"
+      ],
+      "cases": [
+        "link.exact-sequence",
+        "link.source-survives-menu",
+        "link.staged-only"
+      ]
+    },
+    "L2": {
+      "status": "active",
+      "unit": "5.1",
+      "exports": [
+        "game.link",
+        "game.dispatch",
+        "game.observe",
+        "game.field"
+      ],
+      "tests": [
+        "tests/core/first-playable-connections.test.ts"
+      ],
+      "cases": [
+        "link.invalid-kind",
+        "link.missing-source",
+        "link.reconnect"
+      ]
+    },
+    "E1": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    },
+    "E2": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    },
+    "E3": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    },
+    "E4": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    },
+    "T1": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    },
+    "T2": {
+      "status": "pending",
+      "unit": "6.1",
+      "cases": []
+    }
   }
 }
