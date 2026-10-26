@@ -1,9 +1,8 @@
 # TypeScript navigation implementation evidence
 
-Setup 2026-10-26. No implementation run has started. Baseline/specification
-checks are separate from the 50 pending navigation checks. Read comparison.md
-for provenance, supplied code, accounting rules and the historical comparison's
-limitations. The planner supplied the baseline, API types, specification helpers,
+Setup 2026-10-26; execution ran through unit 7.1. Baseline/specification checks
+are separate from the 50 navigation checks. Read comparison.md for provenance,
+supplied code, accounting rules and the historical comparison's limitations. The planner supplied the baseline, API types, specification helpers,
 obligation checks and plan; no production navigation code or private model.
 
 Record actual outcomes here per unit. Include failed approaches, equivalent
@@ -18,6 +17,7 @@ metrics remain unavailable. A finite test pass is not a proof.
 | 4.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 49 core tests, 2 browser tests, benchpress lint; the active contract file reports 24 named checks (nine model, five axis, four words plus six lines) | No failed approach or manual assistance. `registerLines({ ...model, ...lines })` was appended after the words group; all earlier groups stayed active. No interface revision was needed. |
 | 5.1 | This commit (implementation, contract registration, independent examples and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` and `direnv exec . just test` green: contract integrity, typecheck, 59 core tests, 2 browser tests, benchpress lint; the active contract file reports 27 named checks (nine model, five axis, four words, six lines plus three find) | No failed approach or manual assistance. `registerFind({ ...model, ...find })` was appended after the lines group; all earlier groups stayed active. No interface revision was needed. One independent row-boundary expectation was initially hand-worked as crossing into the previous row and corrected by re-reading the strict same-row rule before the suite ran. |
 | 6.1 | This commit (implementation, complete API assembly, contract registration, sequence tests, harness fix and this evidence row) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify`, `direnv exec . just test` and `nix develop --command just contract-complete` green: contract integrity, typecheck, 91 core tests, 2 browser tests, benchpress lint; `just contract-complete` reports all 50 named checks | No failed implementation approach or manual assistance. `registerAll(actualApi)` replaced the six individual registrations exactly once. The `contract-complete` recipe now clears Bun's AI-agent environment markers before invoking the unchanged audit tool because Bun hides passing test names when `AGENT=1`, which made the name audit fail even with 50 passes. Three hand-worked word/find expectations were corrected after the first test run: small `w` starts a punctuation run, counted find ranks accumulate rather than restart. |
+| 7.1 | This commit (browser scene, development/production browser sequences, timing evidence, verification wiring and documentation) | OpenCode / `deepseek/deepseek-flash`, high effort | 1 | `direnv exec . just verify` green: contract integrity, all 50 named contract checks through `just contract-complete`, typecheck, 91 core tests, 22 browser tests (development and production), benchpress lint | No failed approach or manual assistance. Browser capture maps keyboard events to `Input` and feeds `actualApi.step`; it does not compute destinations or parser outcomes. The tests check both reported observations and the cursor's actual canvas pixels. |
 
 **Unit 1.1 representation notes.** `Field` is a normalized 800-cell ASCII string
 at runtime, branded at the type level so ordinary strings cannot be passed as a
@@ -118,3 +118,74 @@ Bun 1.3.13 suppresses passing test names when it detects `AGENT=1`, so the
 unchanged contract audit could not see the 50 names. The `contract-complete`
 just recipe now runs the same audit under `env -u AGENT -u CLAUDECODE -u REPL_ID`;
 the audit tool and contract files are untouched.
+
+**Unit 7.1 browser and evidence notes.** `src/web/main.ts` owns only rendering
+and event capture. It starts from `actualApi.initial()`, draws `actualApi.contents`
+and the cursor, and sends each captured `Input` through `actualApi.step`; the
+pending mode and position are reported in the status line and on the canvas
+data attributes. The canvas is focusable, takes focus on pointer down, sends an
+unblocked Escape on canvas or window blur, ignores keydown while an IME
+composition is active, and maps Ctrl/Alt/Meta chords to blocked input. Keys with
+more than one code point become `Other`. Escape and unmodified single-code-point
+keys are prevented from scrolling or activating browser defaults; modified
+chords are left to the browser.
+
+The browser tests use the initial seed and hard-coded expected destinations
+worked from the authority rather than browser-side calculations. They cover the
+initial frame, `5j`, Shift+`w`, `2fx` both as a row-zero miss and a successful
+counted find on row 1, `F` pending and completing a literal space, `gg`, `3G`,
+Escape on find/go prefixes, a blocked Control+`j` chord with a pending count,
+window blur cancellation and a composed keydown that is ignored until the
+logical character commits. Each case reads the reported position/mode/count and
+locates the cursor by scanning the canvas for its rendered colour, then checks
+the derived cell. The same tests run in both Playwright projects; there are 22
+browser tests including the retained baseline smoke test.
+
+**Unit 7.1 high-count timings.** Measured 2026-10-26 on Linux NixOS 6.18.55,
+x86_64, Bun 1.3.13 and Chromium 150.0.7871.181 against the production preview,
+headless. Each cell is final position / median dispatch milliseconds (maximum
+dispatch milliseconds) over five runs after three warmups. Sequential synthetic
+`keydown` events were dispatched on the focused canvas; the measurement covers
+event mapping, `actualApi.step`, status update and canvas redraw, not Playwright
+round trips. No sustained main-thread stalls appeared; the largest single
+dispatch was 1.6 ms. No latency threshold is claimed.
+
+| family | command | count 1 | count 99 | count 9999 |
+| --- | --- | --- | --- | --- |
+| words | `w` | 6 / 0.40 (0.40) | 799 / 0.50 (0.60) | 799 / 0.60 (0.90) |
+| words | `b` | 0 / 0.20 (0.40) | 0 / 0.30 (0.40) | 0 / 0.50 (0.60) |
+| words | `e` | 4 / 0.20 (0.40) | 799 / 0.30 (0.40) | 799 / 0.50 (0.60) |
+| words | `W` | 6 / 0.20 (0.30) | 799 / 0.30 (0.40) | 799 / 0.50 (0.50) |
+| words | `B` | 0 / 0.30 (0.40) | 0 / 0.30 (0.30) | 0 / 0.40 (0.50) |
+| words | `E` | 4 / 0.20 (0.40) | 799 / 0.30 (0.40) | 799 / 0.40 (0.70) |
+| axis | `h` | 0 / 0.20 (0.30) | 0 / 0.30 (0.50) | 0 / 0.50 (1.00) |
+| axis | `j` | 40 / 0.20 (0.30) | 760 / 0.30 (0.50) | 760 / 0.50 (0.60) |
+| axis | `k` | 0 / 0.20 (0.20) | 0 / 0.30 (0.50) | 0 / 0.50 (0.60) |
+| axis | `l` | 1 / 0.20 (0.40) | 39 / 0.30 (0.30) | 39 / 0.40 (0.50) |
+| lines | `^` | 0 / 0.20 (0.30) | 0 / 0.30 (0.30) | 0 / 0.50 (0.50) |
+| lines | `$` | 39 / 0.20 (0.50) | 799 / 0.40 (0.50) | 799 / 0.40 (0.50) |
+| lines | `G` | 0 / 0.20 (0.30) | 760 / 0.50 (0.70) | 760 / 0.60 (0.90) |
+| lines | `gg` | 0 / 0.30 (0.50) | 760 / 0.40 (0.50) | 760 / 0.70 (0.90) |
+| lines | `0` | 0 / 0.10 (0.30) | | |
+| find | `f` | 53 / 0.50 (0.50) | 40 / 0.40 (0.50) | 40 / 0.60 (0.70) |
+| find | `F` | 40 / 0.50 (1.60) | 40 / 0.60 (0.70) | 40 / 0.60 (0.70) |
+
+Find rows started at position 40 on row 1, so `1fx` reaches 53 while higher
+ranks miss and stay at 40. `0` is measured only at the default count because a
+pending count makes the input `0` extend the count instead of executing the
+zero-column motion, even though `lineMove("zero")` ignores its count. Counts are
+explicit (`1w`), so the count digit is included in each measured sequence.
+
+**Unit 7.1 Ploopy measurements and limits.** Before this unit's state was
+recorded, `ploopy report NAVIGATION_EXECUTION` showed 6 of 7 units landed, six
+sessions, 10m30s in sessions, 21s in checks, $0.10, 6.6M tokens read with 96%
+from cache and 90k written, and a median `just verify` of 2s. `ploopy history`
+showed one OpenCode / `deepseek/deepseek-flash` high session per unit at about
+$0.01 and one minute. The 7.1 session's own cost, tokens and elapsed time are not
+in the state file until Ploopy records them; they are unknown here, not zero.
+Ploopy covers recorded state and stats logs, so the timing table came from the
+separate in-browser measurement above. The timing evidence is one host, one
+headless Chromium, one production bundle, synthetic events and five runs; it is
+finite evidence, not a usability threshold or a universal latency statement.
+The pixel check relies on the cursor's rendered colour, and the scene still has
+no editing, time, objective or game scoring.

@@ -31,3 +31,4 @@ footer { display: flex; justify-content: space-between; gap: 16px; margin-top: 1
   main { width: calc(100% - 24px); margin-top: 36px; }
   footer { flex-direction: column; gap: 4px; }
 }
+canvas:focus-visible { outline: 2px solid #b3c88e; outline-offset: -2px; }

@@ -28,7 +28,7 @@ test-browser: build
 preview: build
     bun run preview
 
-verify: contract typecheck test test-browser
+verify: contract contract-complete typecheck test test-browser
     benchpress lint
 
 check-nix:

@@ -1,7 +1,8 @@
 # vim-flow-ts
 
 The ordinary TypeScript/Bun comparison arm of vim-flow. Read docs/direction.md
-and docs/experiments/comparison.md. The navigation plan is written but not run.
+and docs/experiments/comparison.md. Navigation is implemented; evidence is
+recorded in docs/experiments/navigation.md.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as

@@ -14,12 +14,15 @@ and independently evaluated behavior; do not assume either language wins.
 
 ## What runs now
 
-Only the common baseline: a pure TypeScript 40x20 bordered glyph field drawn on
-Canvas. Bun serves and bundles; Nix pins tools; Bun and Chromium check it. No
-navigation implementation has been supplied. The seven-unit navigation plan
-will implement the same behavior as the sibling from its original handoff.
+The seeded 40x20 text field is drawn on Canvas with a visible cursor. Keyboard
+capture feeds the pure TypeScript navigation API without computing destinations
+in the browser, and the status line reports pending counts, find and go prefixes.
+The supported motions are counted `h j k l`, `w b e W B E`, `0 ^ $`, `gg G` and
+`f F`; Escape and browser blur cancel a stranded prefix. There is still no
+editing, time or game objective. Bun serves and bundles; Nix pins tools; Bun and
+Chromium check contract, core and development/production browser behavior.
 
 ## Next discussion
 
-After navigation, choose the first playable objective and use the same brief
-and acceptance criteria for both repositories. See docs/experiments/comparison.md.
+Choose the first playable objective and use the same brief and acceptance
+criteria for both repositories. See docs/experiments/comparison.md.
