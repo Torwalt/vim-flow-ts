@@ -40,6 +40,7 @@ const colors = {
   link: "#5d8c9e",
   linkSelected: "#8fd3c0",
   source: "#d9a05b",
+  rally: "#e3a94f",
 };
 
 function required<T extends Element>(selector: string): T {
@@ -65,6 +66,7 @@ const hudResources = document.querySelector<HTMLElement>("#hud-resources");
 const hudMode = document.querySelector<HTMLElement>("#hud-mode");
 const hudCursor = document.querySelector<HTMLElement>("#hud-cursor");
 const hudSource = document.querySelector<HTMLElement>("#hud-source");
+const hudRally = document.querySelector<HTMLElement>("#hud-rally");
 const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
 const hudNotice = document.querySelector<HTMLElement>("#hud-notice");
 const hudClock = document.querySelector<HTMLElement>("#hud-clock");
@@ -95,6 +97,24 @@ let viewport: Viewport = { columns: 1, rows: 1 };
 let composing = false;
 
 function describeSite(observation: Observation): { label: string; resources: string } {
+  if (observation.mode === "Insert") {
+    const candidates = observation.candidates.length === 0
+      ? "no matching command"
+      : observation.candidates.join(" · ");
+    return {
+      label: `INSERT ${observation.insertSite ?? "ground"}`,
+      resources: `${candidates} · Tab complete · Enter commit · Esc cancel`,
+    };
+  }
+  if (observation.mode === "Name") {
+    const target = observation.nameTarget ?? "";
+    const building = observation.buildings.find(candidate => candidate.id === target);
+    const draft = observation.commandBuffer === "" ? "_" : observation.commandBuffer;
+    return {
+      label: `NAME ${target}`,
+      resources: `name ${draft} · Enter save · Esc default ${building?.name ?? ""}`,
+    };
+  }
   if (observation.mode === "Build" && observation.buildTarget !== null) {
     const id = observation.buildTarget;
     const site = observation.sites[id];
@@ -110,12 +130,12 @@ function describeSite(observation: Observation): { label: string; resources: str
   if (building) {
     if (building.kind === "well") {
       return {
-        label: `${id} WELL`,
+        label: `${id} ${building.name} WELL`,
         resources: `mana ${building.mana}q · out ${building.link ?? "—"}`,
       };
     }
     return {
-      label: `${id} RING`,
+      label: `${id} ${building.name} RING`,
       resources: `mana ${building.mana}q · ${building.produced}/5 · in ${incoming(observation, id)}`,
     };
   }
@@ -247,6 +267,30 @@ function drawLinks(observation: Observation, cssWidth: number, cssHeight: number
   context.restore();
 }
 
+function drawRally(observation: Observation): void {
+  if (observation.rally === null) return;
+  const column = observation.rally.x - camera.x;
+  const row = observation.rally.y - camera.y;
+  if (column < 0 || column >= viewport.columns || row < 0 || row >= viewport.rows) return;
+  const left = gutterPixels + column * CELL_WIDTH;
+  const top = row * CELL_HEIGHT;
+  context.save();
+  context.strokeStyle = colors.rally;
+  context.fillStyle = colors.rally;
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(left + 3, top + 2);
+  context.lineTo(left + 3, top + CELL_HEIGHT - 2);
+  context.stroke();
+  context.beginPath();
+  context.moveTo(left + 3, top + 2);
+  context.lineTo(left + CELL_WIDTH - 2, top + 5);
+  context.lineTo(left + 3, top + 8);
+  context.closePath();
+  context.fill();
+  context.restore();
+}
+
 function drawSourceHighlight(observation: Observation): void {
   if (observation.pendingSource === null || observation.pendingFrom === null) return;
   const left = (observation.pendingFrom.x - 5 - camera.x) * CELL_WIDTH + gutterPixels;
@@ -348,16 +392,19 @@ function render(): void {
     drawCell(text[cursorY * WORLD_WIDTH + cursorX] ?? " ", cursorColumn, cursorRow, colors.cursorGlyph);
   }
 
+  drawRally(observation);
+
   const site = describeSite(observation);
   setText(hudSite, site.label);
   setText(hudResources, site.resources);
   setText(hudMode, modeLabel(observation));
   setText(hudCursor, `${cursorX},${cursorY} · ${camera.x},${camera.y}`);
   setText(hudSource, `source ${observation.pendingSource ?? "—"}`);
+  setText(hudRally, observation.rally === null ? "rally —" : `rally ${observation.rally.x},${observation.rally.y}`);
   setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
   setText(hudNotice, observation.notice);
   setText(hudClock, clockLabel(observation));
-  setText(hudLegend, survival ? "grass . is whitespace" : "");
+  setText(hudLegend, survival ? "grass . is whitespace · i rally Enter" : "");
 
   canvas.dataset.cursorX = String(cursorX);
   canvas.dataset.cursorY = String(cursorY);
@@ -385,6 +432,9 @@ function render(): void {
   canvas.dataset.menuSelection = observation.menuSelection ?? "";
   canvas.dataset.buildTarget = observation.buildTarget ?? "";
   canvas.dataset.insertSite = observation.insertSite ?? "";
+  canvas.dataset.insertCell = observation.insertCell === null ? "" : `${observation.insertCell.x},${observation.insertCell.y}`;
+  canvas.dataset.nameTarget = observation.nameTarget ?? "";
+  canvas.dataset.candidates = observation.candidates.join(",");
   canvas.dataset.notice = observation.notice;
   canvas.dataset.links = observation.links.map(link => `${link.source}>${link.target}`).join(",");
   canvas.dataset.linkCount = String(observation.links.length);
@@ -395,6 +445,7 @@ function render(): void {
   canvas.dataset.elapsedTicks = String(observation.elapsedTicks);
   canvas.dataset.remainderMs = String(observation.remainderMs);
   canvas.dataset.rules = rules;
+  canvas.dataset.rally = observation.rally === null ? "" : `${observation.rally.x},${observation.rally.y}`;
   canvas.dataset.ready = "true";
 }
 
@@ -453,7 +504,16 @@ function singleCodePoint(value: string): boolean {
 
 canvas.addEventListener("keydown", (event) => {
   if (composing || event.isComposing) return;
-  if (!chord(event) && (event.key === "Escape" || singleCodePoint(event.key))) event.preventDefault();
+  const observation = game.observe(state);
+  const survival = game.snapshot(state).rules === "survival";
+  const handlingTab = survival && observation.mode === "Insert";
+  const handlingEnter = survival && (observation.mode === "Insert" || observation.mode === "Name");
+  if (!chord(event) && (
+    event.key === "Escape"
+    || singleCodePoint(event.key)
+    || (event.key === "Tab" && handlingTab)
+    || (event.key === "Enter" && handlingEnter)
+  )) event.preventDefault();
   apply({ type: "key", key: event.key, blocked: chord(event) });
 });
 

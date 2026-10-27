@@ -38,12 +38,14 @@ export interface Well {
   readonly kind: "well";
   readonly mana: number;
   readonly link: BuildingId | null;
+  readonly name?: string;
 }
 
 export interface Ring {
   readonly kind: "ring";
   readonly mana: number;
   readonly produced: number;
+  readonly name?: string;
 }
 
 export type Building = Well | Ring;
@@ -74,6 +76,7 @@ export type BuildingObservation =
     readonly center: Cursor;
     readonly mana: number;
     readonly link: DynamicBuildingId | null;
+    readonly name: string;
   }
   | {
     readonly id: DynamicBuildingId;
@@ -81,6 +84,7 @@ export type BuildingObservation =
     readonly center: Cursor;
     readonly mana: number;
     readonly produced: number;
+    readonly name: string;
   };
 
 export interface Observation {
@@ -93,6 +97,9 @@ export interface Observation {
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
   readonly insertSite: BuildingId | null;
+  readonly insertCell: Cursor | null;
+  readonly nameTarget: DynamicBuildingId | null;
+  readonly candidates: readonly string[];
   readonly pendingFrom: Cursor | null;
   readonly notice: string;
   readonly commandBuffer: string;
@@ -132,6 +139,7 @@ export interface SurvivalBuildingSetup {
   readonly mana?: number;
   readonly link?: DynamicBuildingId | null;
   readonly produced?: number;
+  readonly name?: string;
 }
 
 export interface Scenario {
@@ -166,8 +174,9 @@ interface Placement {
 
 type LeaderMode = { readonly $: "Leader"; readonly count: 0 };
 type BuildMode = { readonly $: "Build"; readonly count: 0 };
-type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: BuildingId };
-type GameMode = Mode | LeaderMode | BuildMode | InsertMode;
+type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: BuildingId | null };
+type NameMode = { readonly $: "Name"; readonly count: 0; readonly id: DynamicBuildingId };
+type GameMode = Mode | LeaderMode | BuildMode | InsertMode | NameMode;
 
 interface InternalWorld {
   readonly rules: RulesProfile;
@@ -181,6 +190,8 @@ interface InternalWorld {
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
   readonly insertSite: BuildingId | null;
+  readonly insertCell: Cursor | null;
+  readonly nameTarget: DynamicBuildingId | null;
   readonly draft: string;
   readonly notice: string;
   readonly navRows: readonly string[] | null;
@@ -236,8 +247,12 @@ function buildMode(): BuildMode {
   return { $: "Build", count: 0 };
 }
 
-function insertMode(site: BuildingId): InsertMode {
+function insertMode(site: BuildingId | null): InsertMode {
   return { $: "Insert", count: 0, site };
+}
+
+function nameMode(id: DynamicBuildingId): NameMode {
+  return { $: "Name", count: 0, id };
 }
 
 function isNavigationMode(mode: GameMode): mode is Mode {
@@ -253,6 +268,7 @@ function construct(data: InternalWorld): World {
     ...data,
     cursor: Object.freeze({ ...data.cursor }),
     mode: Object.freeze({ ...data.mode }),
+    insertCell: data.insertCell === null ? null : Object.freeze({ ...data.insertCell }),
     buildings: new Map(data.buildings),
     dynamic: new Map(data.dynamic),
     rally: data.rally === null ? null : Object.freeze({ ...data.rally }),
@@ -324,6 +340,36 @@ function isDynamicBuildingId(value: unknown): value is DynamicBuildingId {
 function dynamicBuildingId(value: unknown, label: string): DynamicBuildingId {
   if (!isDynamicBuildingId(value)) fail(`${label} must be a survival building id from b001 to b032`);
   return value;
+}
+
+const NAME_PATTERN = /^[A-Za-z0-9 _-]{0,20}$/;
+const GROUND_COMMANDS = ["mana well", "summoning ring", "rally"] as const;
+const BUILDING_COMMANDS = ["connect", "rally"] as const;
+const SURVIVAL_COMMANDS = [...GROUND_COMMANDS, ...BUILDING_COMMANDS] as const;
+
+function defaultBuildingName(kind: "well" | "ring", id: DynamicBuildingId): string {
+  return `${kind === "well" ? "Well" : "Ring"} ${id}`;
+}
+
+function buildingName(value: unknown, kind: "well" | "ring", id: DynamicBuildingId, label: string): string {
+  if (value === undefined) return defaultBuildingName(kind, id);
+  if (typeof value !== "string" || !NAME_PATTERN.test(value)) {
+    fail(`${label} must be at most 20 ASCII letters, digits, spaces, underscores or hyphens`);
+  }
+  return value.trim() === "" ? defaultBuildingName(kind, id) : value;
+}
+
+function trimmedName(value: string): string {
+  return value.replace(/^ +/, "").replace(/ +$/, "");
+}
+
+function commandCandidates(state: InternalWorld): readonly string[] {
+  const building = state.insertSite === null ? undefined : state.buildings.get(state.insertSite);
+  return building === undefined ? GROUND_COMMANDS : BUILDING_COMMANDS;
+}
+
+function candidateMatches(state: InternalWorld): readonly string[] {
+  return commandCandidates(state).filter(command => command.startsWith(state.draft));
 }
 
 function position(value: unknown, label: string): Cursor {
@@ -427,17 +473,18 @@ function survivalBuildingSetup(value: unknown, index: number): { id: DynamicBuil
   const center = buildingCenter(value.center, `buildings[${index}].center`);
   if (value.kind !== "well" && value.kind !== "ring") fail(`buildings[${index}].kind must be well or ring`);
   const mana = integer(value.mana ?? 0, `buildings[${index}].mana`, 0, value.kind === "well" ? WELL_MANA_CAP : RING_MANA_CAP);
+  const name = buildingName(value.name, value.kind, id, `buildings[${index}].name`);
   if (value.kind === "well") {
     if (value.produced !== undefined) fail(`buildings[${index}] is a well and cannot have produced`);
     const link = value.link ?? null;
     if (link !== null && !isDynamicBuildingId(link)) fail(`buildings[${index}].link must name a survival building`);
-    return { id, center, building: { kind: "well", mana, link } };
+    return { id, center, building: { kind: "well", mana, link, name } };
   }
   if (value.link !== undefined && value.link !== null) fail(`buildings[${index}] is a ring and cannot have a link`);
   return {
     id,
     center,
-    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, IMP_CAP) },
+    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, IMP_CAP), name },
   };
 }
 
@@ -512,6 +559,8 @@ function parseScenario(spec: unknown): InternalWorld {
     menuSelection: null,
     buildTarget: null,
     insertSite: null,
+    insertCell: null,
+    nameTarget: null,
     draft: "",
     notice: "",
     navRows,
@@ -667,9 +716,10 @@ export function snapshot(world: World): Scenario {
       const building = state.buildings.get(id);
       const center = state.dynamic.get(id);
       if (!building || !center) continue;
+      const name = building.name ?? defaultBuildingName(building.kind, id);
       buildings.push(building.kind === "well"
-        ? { id, kind: "well", center: { ...center }, mana: building.mana, link: isDynamicBuildingId(building.link) ? building.link : null }
-        : { id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced });
+        ? { id, kind: "well", center: { ...center }, mana: building.mana, link: isDynamicBuildingId(building.link) ? building.link : null, name }
+        : { id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced, name });
     }
     return {
       ...profile,
@@ -717,21 +767,41 @@ export function build(world: World, site: SiteId, kind: "well" | "ring"): World 
   return construct({ ...state, buildings });
 }
 
-export function place(world: World, center: Cursor, kind: "well" | "ring"): World {
-  const state = data(world);
-  if (state.rules !== "survival" || state.navigationOnly) return world;
-  if (kind !== "well" && kind !== "ring") return world;
-  if (!isRecord(center)) return world;
+interface PlacementResult {
+  readonly state: InternalWorld;
+  readonly id: DynamicBuildingId | null;
+  readonly notice: string;
+}
+
+function placementFailure(state: InternalWorld, notice: string): PlacementResult {
+  return { state, id: null, notice };
+}
+
+function placeSurvival(state: InternalWorld, center: Cursor, kind: "well" | "ring"): PlacementResult {
+  if (state.rules !== "survival" || state.navigationOnly) {
+    return placementFailure(state, "Cannot build outside the survival profile");
+  }
+  if (!isRecord(center) || !Number.isInteger(center.x) || !Number.isInteger(center.y)) {
+    return placementFailure(state, "Cannot build: the placement center must be a whole cell");
+  }
   const cell = { x: center.x, y: center.y };
-  if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y)) return world;
-  if (!insideInterior(cell) || overlapsGate(cell)) return world;
-  if (state.dynamic.size >= MAX_BUILDINGS) return world;
-  for (const other of state.dynamic.values()) {
-    if (overlaps(patch(cell), patch(other))) return world;
+  if (!insideInterior(cell)) {
+    return placementFailure(state, "Cannot build: the footprint must stay inside the world");
+  }
+  if (overlapsGate(cell)) {
+    return placementFailure(state, "Cannot build: the footprint overlaps the enemy gate");
+  }
+  if (state.dynamic.size >= MAX_BUILDINGS) {
+    return placementFailure(state, `Cannot build: the ${MAX_BUILDINGS}-building limit is reached`);
+  }
+  for (const [other, otherCenter] of state.dynamic) {
+    if (overlaps(patch(cell), patch(otherCenter))) {
+      return placementFailure(state, `Cannot build: the footprint overlaps ${other}`);
+    }
   }
   const area = patch(cell);
   for (const imp of impsOf(state)) {
-    if (inside(area, imp.x, imp.y)) return world;
+    if (inside(area, imp.x, imp.y)) return placementFailure(state, "Cannot build: an imp occupies the footprint");
   }
   let id: DynamicBuildingId | null = null;
   for (let index = 1; index <= MAX_BUILDINGS; index++) {
@@ -741,14 +811,28 @@ export function place(world: World, center: Cursor, kind: "well" | "ring"): Worl
       break;
     }
   }
-  if (id === null) return world;
+  if (id === null) return placementFailure(state, `Cannot build: the ${MAX_BUILDINGS}-building limit is reached`);
   const buildings = new Map(state.buildings);
+  const name = defaultBuildingName(kind, id);
   buildings.set(id, kind === "well"
-    ? { kind: "well", mana: 0, link: null }
-    : { kind: "ring", mana: 0, produced: 0 });
+    ? { kind: "well", mana: 0, link: null, name }
+    : { kind: "ring", mana: 0, produced: 0, name });
   const dynamic = new Map(state.dynamic);
   dynamic.set(id, { ...cell });
-  return construct({ ...state, buildings, dynamic });
+  return {
+    state: { ...state, buildings, dynamic },
+    id,
+    notice: `Built ${kind.toUpperCase()} ${id}`,
+  };
+}
+
+export function place(world: World, center: Cursor, kind: "well" | "ring"): World {
+  const state = data(world);
+  if (state.rules !== "survival" || state.navigationOnly) return world;
+  if (kind !== "well" && kind !== "ring") return world;
+  if (!isRecord(center)) return world;
+  const result = placeSurvival(state, center, kind);
+  return result.id === null ? world : construct(result.state);
 }
 
 export function link(world: World, source: BuildingId, target: BuildingId): World {
@@ -902,7 +986,7 @@ function buildStep(world: World, state: InternalWorld, key: string): World {
   return world;
 }
 
-function insertStep(world: World, state: InternalWorld, key: string): World {
+function legacyInsertStep(world: World, state: InternalWorld, key: string): World {
   const site = state.insertSite;
   if (site === null) return construct({ ...state, mode: normalMode(), draft: "", insertSite: null, notice: "" });
   const building = state.buildings.get(site);
@@ -992,6 +1076,157 @@ function insertStep(world: World, state: InternalWorld, key: string): World {
   return construct({ ...state, draft: state.draft + key });
 }
 
+function endSurvivalInsert(state: InternalWorld, notice: string): World {
+  return construct({
+    ...state,
+    mode: normalMode(),
+    menuSelection: null,
+    buildTarget: null,
+    insertSite: null,
+    insertCell: null,
+    nameTarget: null,
+    draft: "",
+    notice,
+  });
+}
+
+function rallyProblem(cell: Cursor): string | null {
+  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
+    return "Cannot rally: the cell must be interior";
+  }
+  if (inside(GATE_RESERVED, cell.x, cell.y)) return "Cannot rally: the cell is inside the enemy gate";
+  return null;
+}
+
+function commitSurvivalInsert(world: World, state: InternalWorld): World {
+  const captured = state.insertCell ?? state.cursor;
+  if (!(SURVIVAL_COMMANDS as readonly string[]).includes(state.draft)) {
+    return endSurvivalInsert(state, `Unknown command ${state.draft === "" ? "—" : state.draft}`);
+  }
+  if (state.draft === "rally") {
+    const problem = rallyProblem(captured);
+    if (problem !== null) return endSurvivalInsert(state, problem);
+    return construct({
+      ...state,
+      mode: normalMode(),
+      rally: { ...captured },
+      menuSelection: null,
+      buildTarget: null,
+      insertSite: null,
+      insertCell: null,
+      nameTarget: null,
+      draft: "",
+      notice: `Rally ${captured.x},${captured.y}`,
+    });
+  }
+  if (state.draft === "connect") {
+    const site = state.insertSite;
+    const building = site === null ? undefined : state.buildings.get(site);
+    if (site === null || building === undefined) return endSurvivalInsert(state, "No building at cursor");
+    if (building.kind === "well") {
+      return construct({
+        ...state,
+        mode: normalMode(),
+        pendingSource: site,
+        menuSelection: null,
+        buildTarget: null,
+        insertSite: null,
+        insertCell: null,
+        nameTarget: null,
+        draft: "",
+        notice: `Source ${site}`,
+      });
+    }
+    const source = state.pendingSource;
+    if (source === null) return endSurvivalInsert(state, `No source for ${site}`);
+    const well = state.buildings.get(source);
+    if (!well || well.kind !== "well") return endSurvivalInsert(state, `Invalid source ${source}`);
+    const linked = data(link(world, source, site));
+    return construct({
+      ...linked,
+      mode: normalMode(),
+      pendingSource: null,
+      menuSelection: null,
+      buildTarget: null,
+      insertSite: null,
+      insertCell: null,
+      nameTarget: null,
+      draft: "",
+      notice: `Linked ${source} to ${site}`,
+    });
+  }
+  const kind = state.draft === "mana well" ? "well" : "ring";
+  const result = placeSurvival(state, captured, kind);
+  if (result.id === null) return endSurvivalInsert(state, result.notice);
+  return construct({
+    ...result.state,
+    mode: nameMode(result.id),
+    menuSelection: null,
+    buildTarget: null,
+    insertSite: null,
+    insertCell: null,
+    nameTarget: result.id,
+    draft: "",
+    notice: `Name ${result.id}`,
+  });
+}
+
+function survivalInsertStep(world: World, state: InternalWorld, key: string): World {
+  if (key === "Backspace") {
+    if (state.draft === "") return world;
+    return construct({ ...state, draft: Array.from(state.draft).slice(0, -1).join("") });
+  }
+  if (key === "Escape") {
+    return construct({
+      ...state,
+      mode: normalMode(),
+      insertSite: null,
+      insertCell: null,
+      draft: "",
+      notice: "",
+    });
+  }
+  if (key === "Tab") {
+    const first = candidateMatches(state)[0];
+    return first === undefined ? world : construct({ ...state, draft: first });
+  }
+  if (key === "Enter") return commitSurvivalInsert(world, state);
+  if (!printable(key) || Array.from(key).length !== 1) return world;
+  if (Array.from(state.draft).length >= 32) return world;
+  return construct({ ...state, draft: state.draft + key });
+}
+
+function nameStep(world: World, state: InternalWorld, key: string): World {
+  const id = state.nameTarget;
+  if (id === null) return construct({ ...state, mode: normalMode(), draft: "", notice: "" });
+  if (key === "Backspace") {
+    if (state.draft === "") return world;
+    return construct({ ...state, draft: Array.from(state.draft).slice(0, -1).join("") });
+  }
+  if (key === "Enter") {
+    const building = state.buildings.get(id);
+    if (!building) return construct({ ...state, mode: normalMode(), nameTarget: null, draft: "", notice: "" });
+    const draft = trimmedName(state.draft);
+    const name = draft === "" ? defaultBuildingName(building.kind, id) : draft;
+    const buildings = new Map(state.buildings);
+    buildings.set(id, { ...building, name });
+    return construct({
+      ...state,
+      buildings,
+      mode: normalMode(),
+      nameTarget: null,
+      draft: "",
+      notice: `Named ${id} ${name}`,
+    });
+  }
+  if (key === "Escape") {
+    return construct({ ...state, mode: normalMode(), nameTarget: null, draft: "", notice: "" });
+  }
+  if (!printable(key) || !/^[A-Za-z0-9 _-]$/.test(key)) return world;
+  if (Array.from(state.draft).length >= 20) return world;
+  return construct({ ...state, draft: state.draft + key });
+}
+
 function cancelInteraction(state: InternalWorld): InternalWorld {
   return {
     ...state,
@@ -1000,6 +1235,8 @@ function cancelInteraction(state: InternalWorld): InternalWorld {
     menuSelection: null,
     buildTarget: null,
     insertSite: null,
+    insertCell: null,
+    nameTarget: null,
     draft: "",
     notice: "",
   };
@@ -1021,7 +1258,12 @@ export function dispatch(world: World, event: GameEvent): World {
   }
   if (event.type !== "key") throw new Error("Unsupported game event.");
   if (event.blocked === true) return world;
-  if (state.mode.$ === "Insert") return insertStep(world, state, event.key);
+  if (state.mode.$ === "Insert") {
+    return state.rules === "survival"
+      ? survivalInsertStep(world, state, event.key)
+      : legacyInsertStep(world, state, event.key);
+  }
+  if (state.mode.$ === "Name") return nameStep(world, state, event.key);
   if (event.key === "Escape") {
     return construct({
       ...state,
@@ -1057,6 +1299,19 @@ export function dispatch(world: World, event: GameEvent): World {
   }
   if (state.mode.$ === "Normal" && event.key === "i") {
     const target = siteAt(world, state.cursor.x, state.cursor.y);
+    if (state.rules === "survival") {
+      const next = {
+        ...state,
+        mode: insertMode(target),
+        insertSite: target,
+        insertCell: { ...state.cursor },
+        draft: "",
+        menuSelection: null,
+        buildTarget: null,
+        nameTarget: null,
+      };
+      return construct({ ...next, notice: `Insert: ${commandCandidates(next).join(" · ")}` });
+    }
     if (target === null) {
       return construct({ ...state, notice: "No building at cursor" });
     }
@@ -1124,16 +1379,17 @@ export function observe(world: World): Observation {
       const building = state.buildings.get(id);
       const center = state.dynamic.get(id);
       if (!building || !center) continue;
+      const name = building.name ?? defaultBuildingName(building.kind, id);
       if (building.kind === "well") {
         const link = isDynamicBuildingId(building.link) ? building.link : null;
-        buildings.push({ id, kind: "well", center: { ...center }, mana: building.mana, link });
+        buildings.push({ id, kind: "well", center: { ...center }, mana: building.mana, link, name });
         if (link !== null) {
           const target = state.dynamic.get(link);
           if (target) links.push({ source: id, target: link, from: { ...center }, to: { ...target } });
         }
         if (state.pendingSource === id) pendingFrom = { ...center };
       } else {
-        buildings.push({ id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced });
+        buildings.push({ id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced, name });
       }
     }
   }
@@ -1147,6 +1403,9 @@ export function observe(world: World): Observation {
     menuSelection: state.menuSelection,
     buildTarget: state.buildTarget,
     insertSite: state.insertSite,
+    insertCell: state.insertCell === null ? null : { ...state.insertCell },
+    nameTarget: state.nameTarget,
+    candidates: state.rules === "survival" && state.mode.$ === "Insert" ? candidateMatches(state) : [],
     pendingFrom,
     notice: state.notice,
     commandBuffer: state.draft,

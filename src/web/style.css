@@ -63,10 +63,13 @@ body {
 .hud-resources { color: #a4b293; }
 .hud-cursor { margin-left: auto; color: #99a494; }
 .hud-source,
+.hud-rally,
 .hud-draft,
 .hud-notice,
 .hud-legend,
 .hud-clock { color: #73816d; }
+
+.hud-rally { color: #d3b06a; }
 
 .hud-notice { color: #9db38b; }
 
@@ -75,6 +78,7 @@ body {
 @media (max-width: 720px) {
   #hud { gap: 10px; padding: 0 8px; }
   .hud-resources,
+  .hud-rally,
   .hud-draft,
   .hud-notice,
   .hud-legend { display: none; }

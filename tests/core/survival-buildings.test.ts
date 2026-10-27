@@ -52,7 +52,7 @@ test("survival placement accepts the interior edges and rejects anything outside
   const first = game.place(start, { x: 6, y: 3 }, "well");
   expect(first).not.toBe(start);
   expect(game.observe(first).buildings[0]).toEqual({
-    id: "b001", kind: "well", center: { x: 6, y: 3 }, mana: 0, link: null,
+    id: "b001", kind: "well", center: { x: 6, y: 3 }, mana: 0, link: null, name: "Well b001",
   });
   expect(game.glyphAt(first, 1, 1)).toBe("b");
   expect(game.glyphAt(first, 4, 5)).toBe("W");
@@ -61,7 +61,7 @@ test("survival placement accepts the interior edges and rejects anything outside
   expect(second).not.toBe(first);
   expect(ids(second)).toEqual(["b001", "b002"]);
   expect(building(second, "b002")).toEqual({
-    id: "b002", kind: "ring", center: { x: 233, y: 154 }, mana: 0, produced: 0,
+    id: "b002", kind: "ring", center: { x: 233, y: 154 }, mana: 0, produced: 0, name: "Ring b002",
   });
   expect(game.glyphAt(second, 234, 156)).toBe("G");
 
@@ -148,8 +148,8 @@ test("survival scenario links arbitrary dynamic endpoints and round-trips", () =
   expect(before.siteAtCursor).toBe("b001");
   expect(before.rally).toEqual(DEFAULT_RALLY);
   expect(before.buildings).toEqual([
-    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: null },
-    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0 },
+    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: null, name: "Well b001" },
+    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0, name: "Ring b002" },
   ]);
   expect(game.siteAt(state, 8, 10)).toBe("b001");
   expect(game.siteAt(state, 18, 12)).toBe("b001");
@@ -159,7 +159,7 @@ test("survival scenario links arbitrary dynamic endpoints and round-trips", () =
   expect(linked).not.toBe(state);
   const observation = game.observe(linked);
   expect(building(linked, "b001")).toEqual({
-    id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: "b002",
+    id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: "b002", name: "Well b001",
   });
   expect(observation.links).toEqual([
     { source: "b001", target: "b002", from: { x: 13, y: 10 }, to: { x: 37, y: 10 } },
@@ -169,8 +169,8 @@ test("survival scenario links arbitrary dynamic endpoints and round-trips", () =
   expect(snapshot.rules).toBe("survival");
   expect(snapshot.rally).toEqual(DEFAULT_RALLY);
   expect(snapshot.buildings).toEqual([
-    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: "b002" },
-    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0 },
+    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: "b002", name: "Well b001" },
+    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0, name: "Ring b002" },
   ]);
   const roundtrip = game.scenario(snapshot);
   expect(game.observe(roundtrip)).toEqual(observation);
