@@ -5,9 +5,9 @@ comparison is paused. Continue this game here; reconsider a Bend rewrite after
 the design stabilizes. Historical measurements remain in the linked notes.
 
 Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
-[seven-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), written but
+[nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), written but
 not started. Terrain, relative row numbers, typed/named construction, building
-finder and enemy waves are planned; the first playable described below runs now.
+finder, free placement, shared rally and fixed-gate enemy waves are planned; the first playable described below runs now.
 
 ```sh
 nix develop

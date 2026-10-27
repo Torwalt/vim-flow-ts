@@ -1,6 +1,6 @@
 # Cursor survival: terrain, typed building and a building finder
 
-Status: TypeScript-only next-pass authority, written 2026-10-27 against `dbb4f78`.
+Status: TypeScript-only next-pass authority, written 2026-10-27 against `fc960b9` (extended before execution).
 This is a small playable iteration. Numerical values and algorithms below are
 planner defaults chosen under the author's request to fill the blanks; they are
 not measured balance or additional author quotations.
@@ -19,18 +19,27 @@ friendly imps fight hostile imps. Distinguish factions by color. Long jumps
 cannot bypass hostile imps. Cursor death ends the run.
 D6. Keep effort modest. No general engine project, parallel Bend implementation,
 formal proof pass, or full RTS systems in this increment.
+D7. Buildings may be placed anywhere on the map instead of at fixed sites.
+D8. Set a central rally point; friendly imps travel there and fight enemies.
+D9. Enemy waves originate at a fixed spawn point. Rallying near it lets the
+player fight enemies at their source.
 
 ## 2. Scope and authority boundaries
 
-Keep 240x160 dimensions, eight fixed 11x7 sites and their art/coordinates,
-initial cursor, local directed mana economy, 100 ms ticks, free construction,
-manual pause, hidden suspension and supported Vim grammar. No free placement,
-resource harvesting, building damage, army orders, fog, saving, upgrades or victory.
-Friendly guards remain at their five rally cells. Combat does not require an
-army-control subsystem. Terrain is traversable scenery for both factions.
+Keep 240x160 dimensions, 11x7 building art/footprints, initial cursor, local
+directed mana economy, 100 ms ticks, free construction, manual pause, hidden
+suspension and supported Vim grammar. Survival starts with no fixed sites or
+buildings; the old eight sites exist only in legacy mode. Add dynamic building
+placement, one shared rally destination and moving allied imps. No resource
+harvesting, building damage, individual army selection/orders, fog, saving,
+upgrades or victory. Terrain and buildings remain traversable by both factions.
+The enemy gate is indestructible this pass; camping it is a combat tactic, not
+a separate win condition. Maximum 32 buildings bounds army size and simulation
+work; this is a planner-selected prototype limit, shown on failed construction.
 
 This authority supersedes first-playable rules only for the new survival mode:
-terrain composition, construction/Insert/finder, named buildings, living troop
+terrain composition, free building placement/identity, construction/Insert/finder,
+named buildings, shared rally/allied movement, fixed enemy gate, living troop
 state and the five-LIVING-imps cap, collision and death. Legacy 40x20 navigation
 and the historical first-playable contract remain runnable. Do not edit frozen
 `docs/first-playable.md`, corpus, manifests or expected results to describe new
@@ -54,11 +63,13 @@ progress, not merely bounds. Finite tests are not universal proofs.
 ## 3. Terrain, anchors and row numbers
 
 Survival logical field retains blank grass cells, boundary #, existing lake and
-tree strip, site/building art and imp glyphs. Add deterministic small landmarks:
+tree strip, dynamically placed building art, gate art and imp glyphs. Add deterministic small landmarks:
 for c=0..9 and r=0..9, origin (8+24c,8+16r), propose a 3x2 cluster with rows
 `^^^`, ` ^ ` when (c+r) is even; otherwise `oo `, ` o `. Skip a whole cluster if
-it intersects any site patch or extends outside the interior. Existing lake and
-tree strip win over new clusters; sites and troops win over terrain. No random
+it intersects the enemy gate's reserved patch or extends outside the interior.
+Existing lake and tree strip win over new clusters; placed buildings and troops
+win over terrain. Building placement clears underlying scenery within its patch
+in the composed field without modifying terrain outside it. No random
 seed or generated-map framework. Clusters give real f/F and word anchors.
 
 Draw every logical blank cell as a faint ASCII `.` grass texture, with a dark
@@ -75,32 +86,48 @@ and camera math; clamp tiny world viewports to one cell. Preserve 12x20 cells an
 DPR behavior. No horizontal number gutter or cursor-following floating panel.
 
 Example logical row `   ^^^    a01` appears as faint grass around a green grove
-and a bright site ID. Word motion sees precisely the logical row above. At world
+and a bright building ID (after construction). Word motion sees precisely the logical row above. At world
 row 10, gutter shows 11 on that row, 1 above/below, 2 two rows away. `7j` moves
 seven world rows, irrespective of the gutter or camera.
 
 ## 4. Typed construction, names and connections
 
-Normal i opens Insert on any site patch, capturing that site; outside sites it
-reports an error. Empty site candidates are exactly `mana well` and
-`summoning ring`; built-site candidate is exactly `connect`. Draft max 32 ASCII
-characters, Backspace and blocked/non-ASCII behavior as before. Case-sensitive
-commands; no trimming. Only Enter commits commands. Escape always cancels the
-draft, preserves an already staged source and returns Normal. Blur/hidden cancel
-all interaction and source. Normal Escape still clears source.
+Normal i opens Insert anywhere, capturing the cursor cell and any building
+whose footprint contains it. On open ground candidates are `mana well`,
+`summoning ring`, `rally`, in that order; on a built footprint they are `connect`,
+`rally`. Draft max 32 ASCII characters; Backspace and blocked/non-ASCII behavior
+as before. Case-sensitive commands; no trimming. Only Enter commits. Escape
+cancels draft, preserves staged source and returns Normal. Blur/hidden cancel
+all interaction/source. Normal Escape still clears source.
 
-Display candidates whose full command starts with the draft, in the order above.
-Tab replaces draft with the first matching command; it never executes. Empty
-site Enter with an exact building command constructs immediately and opens Name
-for the captured site. Reject occupied/wrong-context/invalid commands without
-mutating buildings. No Build menu in survival. Time runs in Insert and Name.
+Display candidates whose full command starts with draft. Tab replaces draft
+with first match and never executes. An exact building command centers its
+11x7 patch at the captured cursor (relative center 5,2, top-left x-5,y-2).
+Require every patch cell inside x=1..238,y=1..158, no overlap with an existing
+building or gate's reserved 5x5 patch, and no live imp anywhere in the patch.
+Scenery is cleared, not an obstacle. Reject invalid placement atomically with a
+specific notice; no building, name prompt or ID allocation on failure. Reject
+construction within an existing footprint; cap 32 also rejects. The captured
+position is validated again at Enter because enemies keep moving while typing.
+A legal build constructs immediately and opens Name. Cursor stays at its center.
+Allocate stable survival IDs b001, b002, ... by successful construction order;
+IDs never change with names. Dynamic IDs, positions and links belong to validated
+survival scenario/snapshot APIs; do not widen the old fixed-SiteId domain without
+preserving legacy validation. No Build menu in survival. Time runs in all menus.
+
+Exact `rally` sets/replaces the shared rally cell at the captured cursor and
+returns Normal without a Name prompt. Require an interior cell outside the
+gate's reserved patch with no enemy at commit; friendly overlap is allowed.
+Invalid rally changes nothing. Works on a building footprint, with no change to
+the building or pending source. Rally defaults to initial cursor (13,10) until
+changed. Existing and future allies obey the latest rally. No per-ring orders.
 
 Name draft starts empty. Accept ASCII letters, digits, space, underscore and
 hyphen, at most 20 characters. Enter trims leading/trailing spaces; empty uses
-`Well a01` or `Ring a02` with actual ID. Escape/blur/hidden use the default name;
+`Well b001` or `Ring b002` with actual ID. Escape/blur/hidden use the default name;
 they never undo an already constructed building. Names need not be unique;
-immutable site ID disambiguates. Display the name in the inspector/finder;
-keep fixed map art and site IDs unchanged, so long names cannot spill into sites.
+immutable building ID disambiguates. Display the name in the inspector/finder;
+keep building art and IDs inside their footprints, so long names cannot spill.
 No rename command this pass.
 
 At a well `i`, `connect`, Enter stages/replaces source. At a ring the same
@@ -108,7 +135,7 @@ sequence links from staged source and clears it only on success. Direction,
 validation, relinking and mana ownership stay unchanged. Source survives finder
 navigation and draft cancellation. Connect+Escape no longer stages a well.
 
-Example: at a01 type `imana well`, Enter, `Foo`, Enter. At a02 type
+Example: at (13,10) type `imana well`, Enter, `Foo`, Enter. At (37,10) type
 `isummoning ring`, Enter, `Guard`, Enter. At Foo type `iconnect`, Enter; use
 finder to Guard and type `iconnect`, Enter. Typed characters inside the buffer
 never become movement commands.
@@ -116,20 +143,23 @@ never become movement commands.
 ## 5. Building finder
 
 Normal Space then f opens Finder with empty query and captured cursor origin;
-outside sites it works too. List built buildings only, row text `name | type | ID`.
+it works on any cell. List built buildings plus two special destinations:
+`Rally | rally | rally` and `Enemy gate | spawn | gate`. Building rows are
+`name | type | ID`. Special destinations make the rally and enemy source easy
+to find across the large map.
 Query max 32 printable ASCII characters; Backspace edits. Match query as an
-ASCII-case-insensitive subsequence of `name type ID` (type is `mana well` or
-`summoning ring`). Sort by name case-insensitively, then site ID. No fuzzy score
-or external package. Up/Down select with clamping; query edits reset to first.
-Enter applies collision-aware movement to selected site's center (relative 5,2),
-then Normal. No result: Enter leaves Finder open with a notice. Escape closes
+ASCII-case-insensitive subsequence of `name type ID` (building types are
+`mana well` and `summoning ring`; special types are as listed above). Sort by
+name case-insensitively, then destination ID. No fuzzy score or external package. Up/Down select with clamping; query edits reset to first.
+Enter applies collision-aware movement to selected building's center (relative
+5,2), rally cell or gate center, then Normal. No result: Enter leaves Finder open with a notice. Escape closes
 without moving. Opening, typing or highlighting never moves the cursor/camera.
 Blur/hidden close and clear source under normal global cancellation. Counts are
 discarded on opening. Pending f/F still consumes Space or i as literal targets.
 Finder and Name ignore navigation bindings as navigation. Time keeps running.
 
 Example names Foo and Bar match `fo` and `br`; duplicate Foo names remain distinct
-by a01/a02. Blocked jump closes Finder at the last safe cursor cell and reports
+by b001/b002. Blocked jump closes Finder at the last safe cursor cell and reports
 which hostile blocked it. Finder cannot teleport through enemy lines.
 
 ## 6. Troop state, economy and combat
@@ -139,16 +169,20 @@ attack tick. Preserve ring/slot identity for legacy mode. Survival allied IDs
 include ring ID plus monotonically increasing spawn serial; dead IDs never recur.
 Allies have 4 HP, enemies 3 HP, cursor 10 HP; all deal 1 damage per attack.
 Cursor has no attack. Cardinal adjacency (Manhattan distance 1) is melee range.
-Allies occupy fixed rally slots; hostile movement never shares a live troop or
-cursor cell. Allies are passable by cursor. Scenery/buildings remain passable.
+Both factions move; no live imps share a cell. Troops cannot move into the
+cursor cell; cursor may pass through/end on an ally. Validated scenarios allow
+that cursor/ally overlap but reject cursor/enemy overlap. Scenery/buildings
+remain passable. A ring's five relative cells on patch row6 are spawn exits,
+not permanently assigned rally positions.
 
-Change cap to five living allies per ring. On economy phase, if ring has mana
-and a vacant rally slot, spend 1000 and summon into lowest available slot unless
-it contains an enemy or cursor; otherwise try next vacant slot. No eligible slot
-means no spend. New allies start nextAttackTick=spawnTick+10. Preserve generation,
-transfer order/caps and one summon/ring/tick. Keep both total-produced and living
-counts in observations; production serial is not the cap. Death frees a slot for
-a later tick, preserving local mana and making replacement possible.
+Change cap to five living allies per ring, counted by origin ring even after
+they leave it. On economy phase, if ring has mana and fewer than five living
+allies, try its five spawn exits left-to-right; choose first with no live imp or
+cursor. Spend 1000 and summon there, else spend nothing. New allies start
+nextAttackTick=spawnTick+10. Preserve generation, transfer order/caps and one
+summon/ring/tick. Keep total-produced and living counts in observations;
+production serial is not the cap. Departing an exit never frees population;
+death does. Replacement has a fresh identity and obeys current global rally.
 
 Enemies spawn with nextAttackTick=spawnTick+10. Every tick after movement, each
 ready imp chooses ONE adjacent opposing imp with lowest HP then ID; enemies
@@ -182,25 +216,48 @@ wrapping in collision geometry. This is the deliberate survival restriction on
 otherwise unchanged Vim target selection. Navigation-only scenarios retain
 unrestricted original motion. No path search to make a cursor jump evade enemies.
 
-Tick phases: increment elapsedTicks; economy; wave spawn; hostile movement on
-ticks divisible by 5; simultaneous combat; death. Existing exact remainder,
-partition behavior, manual pause and hidden suspension apply to all phases.
-Hostile speed is one cardinal cell per 500 ms. Compute a BFS distance field from
-cursor over interior cells, ignoring troop occupancy for distance calculation.
-For each enemy in ID order, choose an unoccupied neighbor of strictly smaller
-distance; tie order north, east, south, west. Occupancy uses updated positions of
-earlier movers, fixed allies and cursor. If none, wait. No entering cursor cell;
-adjacent enemies wait and attack. One shared distance field per movement phase,
-not a path search per enemy. Terrain/buildings do not obstruct BFS.
+Tick phases: increment elapsedTicks; economy; wave spawn; allied then hostile
+movement on ticks divisible by 5; simultaneous combat; death. Existing exact
+remainder, partition behavior, manual pause and hidden suspension apply to all
+phases. Both factions move one cardinal cell per 500 ms. On a movement phase,
+newly spawned units may move; attack still obeys spawn cooldown. An imp adjacent
+to an opponent holds position for combat; an enemy adjacent to cursor also
+holds. Allies do not target the cursor.
+
+Compute shared BFS fields over interior cells, ignoring occupancy for distances:
+one from rally, one from cursor, and a multi-source field seeded by all enemies.
+For each ally in stable ID order, use enemy-distance field if its current distance
+is <=6, otherwise rally-distance field. Choose an unoccupied cardinal neighbor of
+strictly smaller distance; tie order north,east,south,west. At rally distance0
+wait. At a blocked approach wait; no per-unit path search, formation allocation
+or route around crowd this pass. A packed group settles around rally; moving
+rally directs survivors onward. Allies pursue enemies within six path cells,
+then resume rally when none remains in range.
+
+Then for each enemy in ID order use cursor-distance field and same descending
+neighbor/tie rule. Occupancy includes all live troops with earlier moves applied
+and cursor; do not swap, overlap or enter cursor. Terrain, buildings and gate do
+not obstruct distances/movement. Enemy targeting remains cursor chase with
+adjacent allied combat priority (§6); no additional pursuit AI. At most three
+shared distance fields per movement phase, not one BFS per troop. Distances and
+tie rules, not private storage, define behavior. No separation/diagonal movement.
+
+One visible fixed enemy gate is centered at (200,136); reserve x=198..202,
+y=134..138 from building placement. Draw 3x3 logical glyph art centered there:
+`/O\`, `|O|`, `\O/` (ASCII backslashes). Gate is a permanent map anchor,
+passable by troops/cursor, and has no HP or attacks. Rally may be set next to the
+reserved patch; allied troops may enter and camp it. Finder can target gate.
 
 Wave n=1 starts at tick300 (30s), then tick300+200*(n-1); size=min(n+2,16).
-Spawn in row-major order on the Chebyshev-distance-12 perimeter around cursor,
-clipped to interior; skip occupied cells, site patches and cursor. If insufficient
-cells, spawn the available prefix and discard remainder. Enemy cap128; only
-spawn remaining capacity. Wave counter still advances. IDs use wave+ordinal.
-Enemies do not despawn with camera movement. No randomness, queues or hidden
-units. Cap is a performance bound, not a victory condition; repeated waves
-replace losses and make survival harder. Wave1=3, wave2=4, wave14+=16.
+Candidate spawn cells are the fixed Chebyshev-distance 2 perimeter around gate
+center: 16 cells, row-major order. Skip cells occupied by any live troop or cursor.
+Spawn available prefix up to wave size and enemy cap128; discard unspawned
+remainder. No relocated spawn, deferred queue, hidden units or randomness.
+Wave counter still advances even when camped/at cap; gate never follows cursor.
+IDs use wave+ordinal. Enemies persist offscreen. Wave1=3, wave2=4, wave14+=16.
+Friendly imps can fight at the perimeter and suppress occupied spawn cells; this
+is intentional. Distant enemies take time to reach the cursor, so rallying toward
+the gate offers an offensive choice rather than waiting for an attack.
 
 At cursor HP0 set game-over, cancel all interaction/source and freeze simulation
 at the lethal transition. Drop remaining elapsed time/remainder after death.
@@ -216,7 +273,9 @@ wave and enemy kills. Restart resets clock anchor in browser, preventing catch-u
 Both factions use i glyphs: allies cyan, enemies red/orange, cursor bright gold;
 add compact faction legend and selected/nearby HP readout so color is not the
 only means of identification. Draw a small distinct faction pip/underline and
-injured-unit health bar. Finder is a readable list overlay; Insert candidates
+injured-unit health bar. Show gate and shared rally marker, plus rally coordinates in HUD. Rally is a
+flag overlay (not a logical glyph), visible even on a building; gate has real
+text art. Include a compact `i rally Enter` hint. Finder is a readable list overlay; Insert candidates
 and Name prompt show actual text. Prevent default Tab/arrow/Enter scrolling only
 when the focused canvas handles them; preserve browser shortcuts and IME rules.
 
@@ -226,13 +285,15 @@ Expose validated scenario setup and observations/snapshots for all new state;
 no private-state fabrication. Property checks: deterministic/partition-invariant
 clock until death, unique living positions/IDs, HP/caps, mana accounting, no
 cancelled command side effects, valid links, collision equivalence across input
-paths, progress for waves/chase/combat/replacements. Death is an explicit terminal
+paths, progress for waves/chase/rally/combat/replacements. Death is an explicit terminal
 boundary for partition checks, not an excuse to skip them.
 
 Independent examples include command/name cancellation, query duplicate names,
 relative gutter resize, unobstructed/blocked gg/word/find/finder paths, diagonal
 corner blocking, attack cooldown spam, simultaneous kills, replacement funding,
-wave boundary300/500 and capacity, paused menus/hidden time, input death and
+placement edge/overlap/scenery clearing/ID allocation, dynamic-link validation,
+rally retargeting/newborns/arrival/aggro return, ring cap after departure, fixed
+gate boundary300/500/capacity/occupied exits, paused menus/hidden time, input death and
 elapsed death/restart. Browser tests use real keys/manual clock and inspect
 visible text/pixels as well as observations, in both dev and production projects.
 Keep all historical checks active through explicit legacy profile routing and

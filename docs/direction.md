@@ -21,8 +21,9 @@ and the codebase is substantial enough. No ongoing parity obligation.
 [Cursor survival](plans/CURSOR_SURVIVAL.md) specifies the next pass:
 faint rendered grass over logical whitespace, real terrain landmarks, relative
 row numbers, typed/autocompleted construction with optional names, Space f
-building finder, hostile imp waves, allied guards, collision and cursor health.
-[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has seven units. Written, not
+building finder, free placement, shared rally, moving allies, fixed-gate hostile
+waves, collision and cursor health.
+[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has nine units. Written, not
 started; defaults are planner choices under the author's request. Features below
 remain the currently running first playable until those units land.
 
