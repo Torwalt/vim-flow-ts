@@ -24,6 +24,31 @@
         "reasoning": 18290,
         "cache_read": 2946304
       }
+    },
+    "1.2": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T11:55:30+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "b2556421ed8330f5d6d5eeb460185c30d96ad19b",
+      "commits": [
+        "fe5fd4dddc866186e49bc74f1f99ecad430e1b2c Add dynamic survival buildings and the fixed gate"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `fe5fd4d` adds survival dynamic building identity and placement. `game.place(world, center, kind)` centres an 11x7 footprint on the cursor, rejects out-of-interior, gate-reserved, overlapping and above-cap placements atomically, and allocates the first free `b001`..`b032` ID only on success. Survival scenarios/snapshots now carry `{ id, kind, center, mana?, link?, produced? }` entries and a `rally` (default `(13,10)`); observations expose `buildings`, `rally`, dynamic `siteAt`/`siteAtCursor`, links and pending sources. The fixed gate renders `/O\\`, `|O|`, `\\O/` at `(200,136)` with its `x=198..202, y=134..138` reservation honoured by placement and composition. `tests/core/survival-buildings.test.ts` covers edges, overlap, scenery clearing, gate exclusion, ID sequencing, the 32 cap, arbitrary links, rejected scenarios and snapshot round-trip. Coverage and AGENTS reflect the new state.\n\n**Landmark drift** — `SiteDefinition` remains the fixed-site type; dynamic placements live in a separate internal `dynamic: Map\u003cid, center\u003e` alongside the shared buildings map. `Well.link` and `pendingSource`/`insertSite`/`siteAt` are widened from `SiteId` to `BuildingId`; legacy runtime validation is unchanged. `Observation.sites` remains the historical fixed-site map.\n\n**Deviations from the work order** — the survival footprint operation is exported as `game.place` rather than overloading legacy `game.build`, so fixed-site construction stays exactly intact. Dynamic scenario entries use `center` (the captured cursor) rather than top-left coordinates. Placement uses the first unused ID instead of max+1, which still produces b001..b032 in successful construction order from an empty world and avoids filling scenario gaps. `game.link` is shared across profiles with per-profile ID validation. The web inspector now reads dynamic buildings from `observation.buildings` so survival scenarios do not show a false \"empty\" label.\n\n**What the next session must know** — 2.2 should build on `game.place` and `place`'s validation helpers (`insideInterior`, `overlapsGate`, `patch`, `overlaps`) when adding typed Insert, Name and rally commands. Dynamic economy is deliberately not wired into `advance`: the legacy tick still iterates `SITE_DEFINITIONS` only, so scenario-provided dynamic mana does not generate/transfer yet (3.1). `compose` draws the gate only for survival, before dynamic buildings. `space f` on a survival dynamic building currently reports \"No site at cursor\" because the legacy Build menu only accepts fixed IDs; 2.2 replaces that path. Historical browser default is still first-playable; keep `?rules=first-playable` migration for 2.3.\n\n**Open problems** — none blocking. Dynamic buildings are core/scenario-only until 2.2; no names, finder, troop motion, waves or combat exist. `direnv exec . just verify` and `direnv exec . just test` both pass at HEAD (231 core tests, 72 browser tests, coverage/contract checks, typecheck, benchpress lint).",
+      "session_id": "ses_e8306f885ffebDA8QBGlIM2bvN",
+      "cost_usd": 0.07956279,
+      "harness": "opencode",
+      "elapsed_s": 474,
+      "session_s": 456,
+      "verify_s": 17,
+      "test_s": 1,
+      "tokens": {
+        "input": 253697,
+        "output": 19692,
+        "reasoning": 28490,
+        "cache_read": 4199680
+      }
     }
   }
 }
