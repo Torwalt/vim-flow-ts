@@ -89,6 +89,18 @@ const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
 const hudNotice = document.querySelector<HTMLElement>("#hud-notice");
 const hudClock = document.querySelector<HTMLElement>("#hud-clock");
 const hudLegend = document.querySelector<HTMLElement>("#hud-legend");
+const survivalPrompt = required<HTMLElement>("#survival-prompt");
+const survivalPromptTitle = required<HTMLElement>("#survival-prompt-title");
+const survivalPromptText = required<HTMLElement>("#survival-prompt-text");
+const survivalNotice = required<HTMLElement>("#survival-notice");
+const survivalStatusHp = required<HTMLElement>("#survival-status-hp");
+const survivalStatusWave = required<HTMLElement>("#survival-status-wave");
+const survivalStatusKills = required<HTMLElement>("#survival-status-kills");
+const survivalStatusPop = required<HTMLElement>("#survival-status-pop");
+const survivalStatusRally = required<HTMLElement>("#survival-status-rally");
+const survivalStatusSource = required<HTMLElement>("#survival-status-source");
+const survivalStatusClock = required<HTMLElement>("#survival-status-clock");
+const survivalStatusLegend = required<HTMLElement>("#survival-status-legend");
 
 declare global {
   interface Window {
@@ -490,6 +502,7 @@ function render(): void {
 
   const rules = game.snapshot(state).rules ?? "first-playable";
   const survival = rules === "survival";
+  document.body.dataset.rules = rules;
   gutterPixels = survival ? GUTTER_WIDTH : 0;
   viewport = visibleCells(cssWidth, cssHeight, gutterPixels);
   camera = followCamera(camera, observation.cursor, viewport, {
@@ -575,22 +588,46 @@ function render(): void {
   const allies = observation.troops.filter(troop => troop.faction === "ally").length;
   const enemies = observation.troops.length - allies;
   const site = describeSite(observation);
+  const hp = survival ? `HP ${observation.cursorHp}/${CURSOR_MAX_HP}${nearbyHealth(observation)}` : "";
+  const wave = survival ? waveLabel(observation) : "";
+  const kills = survival ? `kills ${observation.kills}` : "";
+  const population = survival ? `allies ${allies} · enemies ${enemies}` : "";
+  const rally = observation.rally === null ? "rally —" : `rally ${observation.rally.x},${observation.rally.y}`;
+  const source = `source ${observation.pendingSource ?? "—"}`;
+  const clock = clockLabel(observation);
+  const legend = survival ? "ally _ cyan · enemy ^ orange · grass . is whitespace" : "";
   setText(hudSite, site.label);
   setText(hudResources, site.resources);
   setText(hudMode, modeLabel(observation));
-  setText(hudHp, survival ? `HP ${observation.cursorHp}/${CURSOR_MAX_HP}${nearbyHealth(observation)}` : "");
-  setText(hudWave, survival ? waveLabel(observation) : "");
-  setText(hudKills, survival ? `kills ${observation.kills}` : "");
-  setText(hudPop, survival ? `allies ${allies} · enemies ${enemies}` : "");
+  setText(hudHp, hp);
+  setText(hudWave, wave);
+  setText(hudKills, kills);
+  setText(hudPop, population);
   setText(hudCursor, `${cursorX},${cursorY} · ${camera.x},${camera.y}`);
-  setText(hudSource, `source ${observation.pendingSource ?? "—"}`);
-  setText(hudRally, observation.rally === null ? "rally —" : `rally ${observation.rally.x},${observation.rally.y}`);
+  setText(hudSource, source);
+  setText(hudRally, rally);
   setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
   setText(hudNotice, observation.notice);
-  setText(hudClock, clockLabel(observation));
-  setText(hudLegend, survival
-    ? "ally _ cyan · enemy ^ orange · grass . is whitespace · i rally Enter"
-    : "");
+  setText(hudClock, clock);
+  setText(hudLegend, survival ? `${legend} · i rally Enter` : "");
+
+  const atSite = observation.siteAtCursor !== null;
+  const promptLabel = observation.mode !== "Normal" || atSite ? site.label : "";
+  const promptText = observation.mode !== "Normal" || atSite ? site.resources : "";
+  const promptVisible = survival
+    && (promptLabel !== "" || promptText !== "" || observation.notice !== "");
+  survivalPrompt.hidden = !promptVisible;
+  setText(survivalPromptTitle, promptLabel);
+  setText(survivalPromptText, promptText);
+  setText(survivalNotice, promptVisible ? observation.notice : "");
+  setText(survivalStatusHp, hp);
+  setText(survivalStatusWave, wave);
+  setText(survivalStatusKills, kills);
+  setText(survivalStatusPop, population);
+  setText(survivalStatusRally, rally);
+  setText(survivalStatusSource, source);
+  setText(survivalStatusClock, clock);
+  setText(survivalStatusLegend, legend);
 
   canvas.dataset.cursorX = String(cursorX);
   canvas.dataset.cursorY = String(cursorY);

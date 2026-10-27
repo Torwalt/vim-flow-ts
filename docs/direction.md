@@ -36,9 +36,11 @@ cursor death until Enter restarts. Allies travel to the latest shared rally,
 pursue enemies within six path cells, hold adjacent combat and resume the rally
 afterward. Cyan allies, orange enemies, non-color faction markers, injured
 health bars, the HP/wave/kills/population HUD and the restart overlay make the
-state readable without relying on color alone. `?rules=first-playable` selects
-the historical playable explicitly. The live map is
-[survival coverage](survival-coverage.md).
+state readable without relying on color alone. Bounded survival overlays keep
+Insert/Name prompts, command notices and the survival status readable at narrow
+and wide viewports without changing the HUD or world geometry.
+`?rules=first-playable` selects the historical playable explicitly. The live map
+is [survival coverage](survival-coverage.md).
 
 ## What runs now
 

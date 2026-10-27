@@ -57,7 +57,10 @@ over deterministic distance fields, cursor
 movement stops before hostiles with contact damage, and death freezes play until
 Enter restarts. Survival presents distinct cyan ally and orange enemy glyphs,
 non-color faction markers, injured health bars and an HP/wave/kills/population
-HUD; the game-over overlay names the restart key. The browser forwards monotonic
+HUD; the game-over overlay names the restart key. Bounded survival overlays
+keep the Insert/Name prompts, command notices, staged source, rally and pause
+status readable at 600x600 and larger without changing the HUD or world
+geometry. The browser forwards monotonic
 frame time into that core, suspends without catch-up while the tab is hidden, and
 Normal `p` toggles manual pause; the HUD also shows mana, link endpoints, ring
 population, mode, draft, source and simulation time. The execution plan runs under OpenCode /

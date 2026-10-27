@@ -36,8 +36,8 @@ Status values: **implemented** and **preserved** (historical behavior kept).
 | §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | implemented |
 | §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`, `game.snapshot`; exported `ALLY_AGGRO_RADIUS`; web render/HUD | `tests/core/survival-allies.test.ts`; `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
 | §8 cyan ally and orange enemy `i` glyphs, non-color faction markers and injured health bars | web `render`, `drawTroopMarkers`, colors, style and markup | `tests/browser/survival-complete-loop.spec.ts` | implemented |
-| §8 gate and rally markers, rally coordinates, `i rally Enter` hint, Finder/Insert/Name text overlays | web `render`, `drawRally`, `drawFinder`, HUD and core terminal notice | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
-| §8 cursor HP, nearby troop HP, next-wave countdown, wave, kills and living-population HUD; game-over overlay with restart instructions | web `render`, `drawGameOver`, HUD markup/style; `game.observe`; core `terminal` | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-death.spec.ts` | implemented |
+| §8 gate and rally markers, rally coordinates, `i rally Enter` hint, Finder/Insert/Name text overlays | web `render`, `drawRally`, `drawFinder`, HUD and bounded survival overlays, core terminal notice | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts`, `tests/browser/survival-readability.spec.ts` | implemented |
+| §8 cursor HP, nearby troop HP, next-wave countdown, wave, kills and living-population HUD; game-over overlay with restart instructions | web `render`, `drawGameOver`, HUD and bounded survival overlays; `game.observe`; core `terminal` | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-death.spec.ts`, `tests/browser/survival-readability.spec.ts` | implemented |
 | §8 deterministic real-key end-to-end flow in development and production browser projects | all exported survival operations and browser event wiring | `tests/browser/survival-complete-loop.spec.ts`; full `just verify` | implemented |
 | §8 validated scenarios, observations/snapshots and finite property checks | `game.initial`, `game.scenario`, `game.snapshot`, `game.observe`, `game.advance`, `game.dispatch` | core survival suites `survival-profile`, `survival-buildings`, `survival-construction`, `survival-finder`, `survival-terrain`, `survival-combat`, `survival-waves`, `survival-allies` | implemented |
 
@@ -227,6 +227,20 @@ the hostile field with no reachable interior cells. No public interface changed.
 plus all four edges, all four corners, and partition invariance with occupancy.
 `tests/core/survival-allies.test.ts` adds allies advancing to a top-edge rally
 while the boundary cursor stays put.
+
+Unit 1.5 adds presentation-only bounded survival overlays: `#survival-overlay`
+contains `#survival-prompt` for the current Insert/Name/Finder/Build label and
+help (the existing site resources text), the current notice, and
+`#survival-status` for HP/nearby health, wave/countdown, kills, population,
+rally coordinates, staged source, time/pause state, the faction legend and the
+`i rally Enter` hint. The overlays sit above the unchanged 32-pixel HUD and are
+shown only when the world profile is survival, so legacy layout, world geometry,
+keyboard commands and core rules are unchanged. `tests/browser/survival-readability.spec.ts`
+uses real keys at 600x600, 800x600, 1000x700 and 1280x720 to check Insert
+candidates/draft, a 20-character Name draft and default prompt, command failure,
+a long named well with a staged source, paused/running time and nearby ally
+health. Each check asks for the panels' boxes and wrapped content to fit inside
+the viewport without document scroll, not only for text content.
 
 Unit 4.1 adds presentation-only faction colors, faction markers and injured
 health bars in `src/web/main.ts`, HUD elements `#hud-hp`, `#hud-wave`,

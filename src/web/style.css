@@ -79,6 +79,76 @@ body {
 
 .hud-legend { color: #7e9578; }
 
+#survival-overlay {
+  position: absolute;
+  left: 56px;
+  right: 8px;
+  bottom: 40px;
+  z-index: 2;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100% - 48px);
+  overflow: hidden;
+  pointer-events: none;
+  color: #a4b293;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+body[data-rules="survival"] #survival-overlay { display: flex; }
+
+#survival-prompt,
+#survival-status {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #2b382d;
+  border-left: 2px solid #5d7a58;
+  background: rgba(17, 23, 20, 0.94);
+  overflow-wrap: anywhere;
+}
+
+#survival-prompt {
+  border-left-color: #b3c88e;
+}
+
+#survival-prompt[hidden] { display: none; }
+
+#survival-prompt-title,
+#survival-prompt-text,
+#survival-notice {
+  display: block;
+}
+
+#survival-prompt-title {
+  color: #d3dfbc;
+}
+
+#survival-prompt-text {
+  color: #a4b293;
+}
+
+#survival-notice {
+  color: #e3a94f;
+}
+
+#survival-notice:empty { display: none; }
+
+#survival-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 2px 14px;
+}
+
+#survival-status > span {
+  min-width: 0;
+}
+
+#survival-status-hp { color: #5ad2c4; }
+#survival-status-rally { color: #d3b06a; }
+#survival-status-legend,
+#survival-status-hint { color: #7e9578; }
+
 @media (max-width: 720px) {
   #hud { gap: 10px; padding: 0 8px; }
   .hud-resources,
