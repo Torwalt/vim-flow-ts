@@ -96,6 +96,27 @@ test("wave fourteen fills the sixteen-cell perimeter and the enemy cap suppresse
   expect(enemies(capped).some(troop => troop.id.startsWith("e1-"))).toBe(false);
 });
 
+test("survival scenarios cap living enemies and accept exactly the cap", () => {
+  const enemyAt = (index: number): SurvivalEnemySetup => ({
+    faction: "enemy",
+    id: `n${index}`,
+    x: 20 + index,
+    y: 20,
+    nextAttackTick: 1_000_000,
+  });
+  expect(() => game.scenario({
+    rules: "survival",
+    troops: Array.from({ length: ENEMY_CAP + 1 }, (_, index) => enemyAt(index)),
+  })).toThrow();
+
+  const full = game.scenario({
+    rules: "survival",
+    troops: Array.from({ length: ENEMY_CAP }, (_, index) => enemyAt(index)),
+  });
+  expect(enemies(full)).toHaveLength(ENEMY_CAP);
+  expect(game.observe(game.scenario(game.snapshot(full)))).toEqual(game.observe(full));
+});
+
 test("occupied gate perimeter cells are skipped while the cursor and gate stay fixed", () => {
   const start = game.scenario({
     rules: "survival",

@@ -125,6 +125,9 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
   `{ faction: "enemy", id, x, y, hp?, nextAttackTick? }` with a 1..32-character
   ASCII ID and HP defaulting to 3. Troop cells must be interior, distinct, and
   never shared with the cursor for enemies; allies may share the cursor cell.
+  Construction rejects more than five living allies per origin ring or more
+  than 128 living enemies, counting supplied troops by ring independent of
+  position and `produced`; valid setup is never trimmed.
   Observations expose sorted `troops`, `cursorHp`, `kills`, and each survival
   ring's total `produced` plus `living` allies attributed to that origin ring
   wherever they stand.
@@ -176,6 +179,15 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
   two-argument call and the first-playable render remain unchanged.
 
 ## Test and interface revisions
+
+Population validation now applies while parsing scenario troops, before any
+production or wave guard. No public interface changed.
+`tests/core/survival-combat.test.ts` rejects a `b001` ring with `produced: 6`
+and six allied serials at `(20..25,20)`, accepts five living allies from each of
+two origin rings with round-trip, and accepts a million-produced ring holding
+five living allies. `tests/core/survival-waves.test.ts` rejects 129 enemies
+`n0..n128` at `(20..148,20)` and accepts exactly 128 with round-trip. Existing
+replacement-production and wave-cap tests remain unchanged.
 
 The boundary-chase fix restricts troop destinations and distance-field traversal
 to the interior `x=1..238, y=1..158` while leaving cursor navigation free to

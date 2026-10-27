@@ -712,6 +712,8 @@ function parseTroops(spec: unknown, buildings: ReadonlyMap<BuildingId, Building>
   const troops: Troop[] = [];
   const ids = new Set<string>();
   const cells = new Set<string>();
+  const alliedLiving = new Map<DynamicBuildingId, number>();
+  let livingEnemies = 0;
   for (const [index, value] of spec.entries()) {
     const troop = survivalTroopSetup(value, index, buildings);
     if (ids.has(troop.id)) fail(`duplicate troop id ${troop.id}`);
@@ -719,6 +721,14 @@ function parseTroops(spec: unknown, buildings: ReadonlyMap<BuildingId, Building>
     if (cells.has(cell)) fail(`troops overlap at ${cell}`);
     if (troop.faction === "enemy" && troop.x === cursorCell.x && troop.y === cursorCell.y) {
       fail(`enemy ${troop.id} overlaps the cursor`);
+    }
+    if (troop.faction === "ally") {
+      const living = (alliedLiving.get(troop.ring) ?? 0) + 1;
+      if (living > IMP_CAP) fail(`ring ${troop.ring} may not have more than ${IMP_CAP} living allies`);
+      alliedLiving.set(troop.ring, living);
+    } else {
+      livingEnemies++;
+      if (livingEnemies > ENEMY_CAP) fail(`troops may not include more than ${ENEMY_CAP} living enemies`);
     }
     ids.add(troop.id);
     cells.add(cell);

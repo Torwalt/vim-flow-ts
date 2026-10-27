@@ -143,6 +143,45 @@ test("survival troop scenarios allow ally/cursor overlap and reject invalid setu
   rejected({ rules: "survival", troops: "none" });
 });
 
+test("survival scenarios cap living allies per origin ring independent of position and produced serial", () => {
+  rejected({
+    rules: "survival",
+    buildings: ring(0, IMP_CAP + 1),
+    troops: Array.from({ length: IMP_CAP + 1 }, (_, index) => ({
+      faction: "ally" as const, ring: "b001", serial: index + 1, x: 20 + index, y: 20,
+    })),
+  });
+
+  const twoRings = game.scenario({
+    rules: "survival",
+    buildings: [
+      { id: "b001", kind: "ring", center: { x: 37, y: 10 }, produced: IMP_CAP },
+      { id: "b002", kind: "ring", center: { x: 60, y: 10 }, produced: IMP_CAP },
+    ],
+    troops: [
+      ...Array.from({ length: IMP_CAP }, (_, index) => ({
+        faction: "ally" as const, ring: "b001", serial: index + 1, x: 20 + index, y: 20,
+      })),
+      ...Array.from({ length: IMP_CAP }, (_, index) => ({
+        faction: "ally" as const, ring: "b002", serial: index + 1, x: 26 + index, y: 20,
+      })),
+    ],
+  });
+  expect(building(twoRings, "b001")).toMatchObject({ produced: IMP_CAP, living: IMP_CAP });
+  expect(building(twoRings, "b002")).toMatchObject({ produced: IMP_CAP, living: IMP_CAP });
+  expect(game.observe(game.scenario(game.snapshot(twoRings)))).toEqual(game.observe(twoRings));
+
+  const highProduction = game.scenario({
+    rules: "survival",
+    buildings: ring(0, 1_000_000),
+    troops: Array.from({ length: IMP_CAP }, (_, index) => ({
+      faction: "ally" as const, ring: "b001", serial: 1_000_000 - index, x: 20 + index, y: 40,
+    })),
+  });
+  expect(building(highProduction, "b001")).toMatchObject({ produced: 1_000_000, living: IMP_CAP });
+  expect(game.observe(game.scenario(game.snapshot(highProduction)))).toEqual(game.observe(highProduction));
+});
+
 test("survival funded production uses the first free spawn exit and a fresh serial", () => {
   const start = game.scenario({
     rules: "survival",
