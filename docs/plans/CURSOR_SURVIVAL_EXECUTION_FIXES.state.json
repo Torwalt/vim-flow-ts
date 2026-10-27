@@ -74,6 +74,31 @@
         "reasoning": 6401,
         "cache_read": 1832704
       }
+    },
+    "1.4": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:46:20+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "5f708e07ae0de6166030c651a62807f896160e72",
+      "commits": [
+        "b1e6f746e655e173192cfbb743f16f989a4bba48 Reject survival counter overflow before returning a world"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.4 — Preserve the numeric domain across survival transitions\n\n**What landed**\n\n`b1e6f74 Reject survival counter overflow before returning a world` adds a\nprivate `checkedCounter(value, increment, label)` helper in `src/core/world.ts`\nand applies it to every survival counter increment named by the work order:\nproduction serial allocation, ally and enemy spawn cooldowns, combat and cursor\ndamage cooldowns, input-contact cooldown, and kill accumulation. The helper\nthrows `Invalid world scenario: \u003clabel\u003e exceeds the safe integer domain` before\n`advance` or `dispatch` constructs a world, so the supplied world is unchanged.\n\n`tests/core/survival-combat.test.ts` reproduces funded production at\n`produced:Number.MAX_SAFE_INTEGER`, kill accumulation at `kills:MAX` and combat\ncooldown overflow at `elapsedTicks:MAX-1`; each throws without changing the\nworld's snapshot or observation. It also checks the last representable serial,\nkill and cooldown round-trip through `game.scenario(game.snapshot(world))`, plus\nidle and blocked rings at maximum production.\n`tests/core/survival-waves.test.ts` covers input-contact overflow and the last\nrepresentable contact cooldown, and a wave spawned at the last representable wave\ntick with exact spawn cooldowns. `docs/survival-coverage.md` records the error\nboundary.\n\n**Landmark drift**\n\nThe work order's line numbers had drifted with units 1.2/1.3: production serial\nis now `world.ts:1207`, spawn cooldowns at 1217/1455, combat cooldowns at\n1248/1251, kill accumulation at 1496, and input contact at 1905. The transition\nbodies themselves matched the plan. `advance`'s elapsed-tick guard remains at\n1515. The plan's `produced:M` example overflow value was one off (`M` is\n`...991`; `M+1` is not safe); the tests use the actual domain boundary.\n\n**Deviations from the work order**\n\nNo behavioral deviation. The wave spawn cooldown guard is defensive: with wave\nticks at `300 + 200k`, the largest in-domain wave tick is `MAX-91`, so its\ncooldown is `MAX-81`; the overflow branch is not reachable through normal wave\ntiming but is checked for consistency. No test was deleted or weakened.\n\n**What the next session must know**\n\n- `checkedCounter` is private and uses the same `fail` prefix as `advance`'s\n  elapsed-tick overflow, so runtime errors read `Invalid world scenario: ...`.\n- Checks run before the world is constructed; in multi-tick `advance` calls an\n  overflow on any intermediate tick throws and leaves the original input intact.\n- Idle and blocked transitions at maximum counters remain valid and round-trip.\n- `direnv exec . just test` passed 300 core tests; `direnv exec . just verify`\n  passed the 106 browser tests, typecheck, contract checks, first-playable\n  completion and benchpress lint. No flake change, so `just check-nix` was not\n  run.\n- The worktree is clean after the commit.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e829cfc05ffeiIMZSOzXtGS0E5",
+      "cost_usd": 0.025182353999999994,
+      "harness": "opencode",
+      "elapsed_s": 178,
+      "session_s": 161,
+      "verify_s": 16,
+      "test_s": 2,
+      "tokens": {
+        "input": 52823,
+        "output": 6681,
+        "reasoning": 13424,
+        "cache_read": 1731968
+      }
     }
   }
 }
