@@ -1,0 +1,29 @@
+{
+  "units": {
+    "1.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:39:06+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "20cd45c5181be94cabe403e125c8aefff39eeeee",
+      "commits": [
+        "872b4378f523623eb2e220192a7b069d0e75e629 Keep troop movement inside the interior"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.1 — Keep moving troops inside their validated domain\n\n**What landed**\n\n`872b437 Keep troop movement inside the interior` restricts distance-field\ntraversal and troop destinations to `x=1..238, y=1..158`. An interior source\nseeds distance zero; a boundary cursor seeds its cardinal interior neighbours at\ndistance one; a corner cursor leaves the hostile field with no reachable interior\ncells, so enemies wait. Additions to `tests/core/survival-waves.test.ts` cover the\nexact `(5,0)` / `(4,1)` case moving east to `(5,1)` with a snapshot round-trip,\nall four edges, all four corners, and partition invariance with occupancy.\n`tests/core/survival-allies.test.ts` covers allies advancing to a top-edge rally\nwhile the cursor sits on the boundary. `docs/survival-coverage.md` records the\ninterior-only contract and the new regression examples.\n\n**Landmark drift**\n\nThe plan's `inWorld` and movement line numbers have shifted by roughly 10 lines\nafter the helper and test additions. `distanceField` is now near\n`src/core/world.ts:1276`; the ally/hostile candidate checks are near 1338 and\n1371. The plan's `inWorld` landmark still exists but is now only used to reject\nsources outside the world; interior checks use the new `inInterior` helper.\n\n**Deviations from the work order**\n\nNo public interface changed. I added one private `inInterior(x, y)` helper and\nused it in the existing interior validators (`troopPosition`, `rallyCell`,\n`rallyProblem`, `insideInterior`) to keep their behavior identical and their\ndomain consistent. The plan only required movement and BFS changes; this reuse\nis behavior-preserving. I added the ally boundary example as a second movement\nsuite example.\n\n**What the next session must know**\n\n- Cursor navigation still reaches every boundary cell and is untouched.\n- Boundary sources generally are virtual sources, but rally and enemy sources\n  are already validated interior cells, so in practice only the cursor can be a\n  boundary source.\n- Corner cursors produce an all-`-1` hostile field; the existing `\u003c= 0` wait\n  check keeps enemies still. Adjacent-enemy and adjacent-cursor combat holds are\n  unchanged.\n- `direnv exec . just verify` passed: 292 core tests, 106 browser tests across\n  both projects, typecheck, contract checks, first-playable completion and\n  benchpress lint. No flake change, so `just check-nix` was not run.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e82a37e00ffeqOcEA113ncveR1",
+      "cost_usd": 0.025875444000000004,
+      "harness": "opencode",
+      "elapsed_s": 171,
+      "session_s": 153,
+      "verify_s": 16,
+      "test_s": 1,
+      "tokens": {
+        "input": 65530,
+        "output": 7939,
+        "reasoning": 11466,
+        "cache_read": 1467648
+      }
+    }
+  }
+}
