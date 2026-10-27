@@ -174,6 +174,31 @@
         "reasoning": 47173,
         "cache_read": 5552384
       }
+    },
+    "3.3": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:48:55+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "3a5672a5ca54027ddb340a44705e460afc1f68eb",
+      "commits": [
+        "27a97527b40fbf2f8761b8d82da95f87855535b0 Move allies to the rally and intercept enemies"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `27a9752` adds the shared-rally allied movement phase.\nEvery fifth tick allies move before enemies over at most three shared BFS fields\n(rally, cursor, all enemies). An ally uses the enemy field when its nearest\nenemy is within `ALLY_AGGRO_RADIUS` (6) path cells, otherwise the rally field;\nit takes the first unoccupied strictly-closer cardinal neighbour in\nnorth/east/south/west order. Allies hold at distance zero, beside an opponent,\nat a blocked approach and never enter the cursor cell. Earlier ally moves count\nas occupancy for later allies and for hostile movement. Newborn allies obey the\ncurrent rally from their first movement phase. `ALLY_AGGRO_RADIUS` is exported\nthrough `game.ts`.\n\n**Landmark drift** — `distanceField` and `MOVE_OFFSETS` were already reusable.\n`tickWorld` now runs `moveAllies` immediately before `moveHostiles` on movement\nticks. The new helper sits between `distanceField` and `moveHostiles`. The web\nrally marker, HUD coordinates and finder destination already observed\n`observation.rally`, so no web code changed.\n\n**Deviations from the work order** — None in behaviour. I added\n`tests/core/survival-allies.test.ts` rather than extending the wave/combat\nsuites, and also corrected the pending-allied-movement statements in `AGENTS.md`,\n`README.md`, `docs/direction.md` and `docs/survival-coverage.md`. The gate\nsuppression/backlog check uses wave 14 with one occupied perimeter cell: it\nspawns 15, and wave 15 fills 16 new `e15-*` IDs with no deferred `e14-16`.\n\n**What the next session must know** — “Stable order” is lexical troop ID, so\n`b001#10` sorts before `b001#2`; `snapshot` forces the same order. Ally hold\nchecks use enemy positions before the enemy movement phase, which is correct\nbecause combat follows both movement phases. Enemy movement now sees allies at\ntheir post-move cells, including any ally that moved adjacent to an enemy.\n`ALLY_AGGRO_RADIUS` is a tuning export; tests read it rather than hard-coding 6\ninside the boundary assertions. `just verify` passed after the commit: 289 core\ntests and 104 browser tests, plus fixture/contract/typecheck/benchpress checks.\n\n**Open problems** — Authority §4 still says a rally commit must reject a cell\noccupied by an enemy, but `rallyProblem` only checks interior and the gate\nreservation. That gap predates this unit and is untouched here. Full faction\ncolours, HP/wave/population HUD and the final end-to-end browser loop remain\nunit 4.1. The workbench topic still describes the pre-survival state; it is\nscheduled for removal in 4.1.",
+      "session_id": "ses_e82d63f71ffeHogyh2djcn7VDA",
+      "cost_usd": 0.07765813799999999,
+      "harness": "opencode",
+      "elapsed_s": 486,
+      "session_s": 470,
+      "verify_s": 15,
+      "test_s": 1,
+      "tokens": {
+        "input": 258399,
+        "output": 17249,
+        "reasoning": 25721,
+        "cache_read": 4372096
+      }
     }
   }
 }
