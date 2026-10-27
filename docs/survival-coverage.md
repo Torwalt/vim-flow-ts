@@ -1,6 +1,6 @@
 # Survival coverage
 
-Authority: [Cursor survival](../cursor-survival.md). This map covers the
+Authority: [Cursor survival](cursor-survival.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
 placement, the fixed gate, deterministic terrain, the relative row gutter,
 typed construction, names, connections, the shared rally command, the building
