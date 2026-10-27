@@ -124,6 +124,31 @@
         "reasoning": 16332,
         "cache_read": 3170688
       }
+    },
+    "1.6": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:51:58+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "5f0228e0221b641b0a45f50388deb9993fdb4659",
+      "commits": [
+        "5d92c74d2022a81ee015468a76427edfce5858c6 Point coverage authority at the implemented survival document"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.6 — Repair the survival coverage authority link\n\n**What landed**\n\n`5d92c74 Point coverage authority at the implemented survival document` changes\nthe authority link at the top of `docs/survival-coverage.md` from\n`../cursor-survival.md` (which resolved to the nonexistent repository-root\n`cursor-survival.md`) to `cursor-survival.md`. From `docs/`, that resolves to the\nexisting `docs/cursor-survival.md`. One line changed; no tests, core code,\nauthority, plan or state file changed.\n\n**Landmark drift**\n\nThe evidence line was still `docs/survival-coverage.md:3`. The plan and its\nreview document still contain old `../cursor-survival.md` references, but those\nare historical evidence and were deliberately left alone.\n\n**Deviations from the work order**\n\nNone. Verified link resolution directly from the coverage file's directory;\n`docs/cursor-survival.md` exists. No new test framework was added, as directed.\n\n**What the next session must know**\n\n- `direnv exec . just verify` passed after the change: 300 core tests, 114\n  browser tests in both projects, first-playable fixture/completion checks,\n  navigation contract checks, typecheck and benchpress lint.\n- `direnv exec . just test` passed (300 core tests).\n- No flake change, so `just check-nix` was not run.\n- The worktree was clean after the commit; the handover is ignored and not\n  added.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e82962c15ffew2IDWiTlR2EFu3",
+      "cost_usd": 0.0068163600000000005,
+      "harness": "opencode",
+      "elapsed_s": 70,
+      "session_s": 47,
+      "verify_s": 21,
+      "test_s": 1,
+      "tokens": {
+        "input": 28344,
+        "output": 1762,
+        "reasoning": 775,
+        "cache_read": 347520
+      }
     }
   }
 }
