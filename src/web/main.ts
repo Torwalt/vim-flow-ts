@@ -186,9 +186,11 @@ function modeLabel(observation: Observation): string {
 }
 
 function clockLabel(observation: Observation): string {
-  const status = observation.manualPaused
-    ? "paused"
-    : observation.suspended ? "hidden" : "running";
+  const status = observation.gameOver
+    ? "game over"
+    : observation.manualPaused
+      ? "paused"
+      : observation.suspended ? "hidden" : "running";
   return `${(observation.elapsedTicks / 10).toFixed(1)}s · ${status}`;
 }
 
@@ -514,11 +516,18 @@ function render(): void {
   canvas.dataset.remainderMs = String(observation.remainderMs);
   canvas.dataset.rules = rules;
   canvas.dataset.rally = observation.rally === null ? "" : `${observation.rally.x},${observation.rally.y}`;
+  canvas.dataset.cursorHp = String(observation.cursorHp);
+  canvas.dataset.kills = String(observation.kills);
+  canvas.dataset.gameOver = String(observation.gameOver);
+  canvas.dataset.wave = String(observation.wave);
+  canvas.dataset.nextWaveTick = String(observation.nextWaveTick);
   canvas.dataset.ready = "true";
 }
 
 function apply(event: GameEvent): void {
+  const wasOver = game.observe(state).gameOver;
   state = game.dispatch(state, event);
+  if (wasOver && !game.observe(state).gameOver) clock.reset(manualClock ? manualNow : null);
   render();
 }
 

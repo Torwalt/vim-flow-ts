@@ -4,8 +4,9 @@ Authority: [Cursor survival](plans/CURSOR_SURVIVAL.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
 placement, the fixed gate, deterministic terrain, the relative row gutter,
 typed construction, names, connections, the shared rally command, the building
-finder and living troop combat. Clauses owned by later units are marked pending;
-they are not claimed as implemented.
+finder, living troop combat, fixed-gate waves, hostile chasing, cursor collision
+and game over. Clauses owned by later units are marked pending; they are not
+claimed as implemented.
 
 Status values: **implemented**, **preserved** (historical behavior kept), and
 **pending** (named execution unit owns it).
@@ -31,14 +32,16 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 | §4 typed Insert construction, autocomplete, names, shared rally commands and connect through input | `game.dispatch`, `game.observe`, `game.snapshot`, `game.place` | `tests/core/survival-construction.test.ts`, `tests/browser/survival-construction.spec.ts` | implemented |
 | §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | `tests/core/survival-finder.test.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
 | §6 living troop identity, HP, cooldowns, replacement production and simultaneous combat | `game.advance`, `game.scenario`, `game.snapshot`, `game.observe`, `game.imps`; exported `ALLY_HP`, `ENEMY_HP`, `CURSOR_MAX_HP`, `ATTACK_COOLDOWN` | `tests/core/survival-combat.test.ts`; legacy economy/clock suites | 3.1 | implemented |
-| §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented (movement later) |
-| §7 waves, chase/collision, allied rally movement and death/restart | `game.dispatch`, `game.advance`, `game.snapshot`, `game.observe`; `game-navigation`; web clock | movement/wave/death core, partition and browser tests | 3.2 (waves/collision/death), 3.3 (allied movement) | pending |
-| §8 faction presentation, health/HUD, restart copy and end-to-end acceptance | web `render`, style and page markup; all exported survival operations | pixel/text browser suites, complete survival loop, final coverage audit | 3.2, 4.1 | pending |
+| §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented |
+| §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | 3.2 | implemented |
+| §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | 3.2 | implemented |
+| §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`; web render/HUD | core movement and browser tests | 3.3 | pending |
+| §8 faction presentation, health/HUD, restart copy and end-to-end acceptance | web `render`, style and page markup; all exported survival operations | pixel/text browser suites, complete survival loop, final coverage audit | 4.1 | pending |
 
 Clock increment, manual pause and hidden suspension run for both profiles and
-are preserved. Survival economy ticks, combat damage and troop death now run in
-§6 order; cursor game over, wave scheduling and troop movement remain pending
-with §7.
+are preserved. Survival economy ticks, wave spawning, hostile movement, combat
+damage and cursor death run in §7 order; allied movement remains pending with
+§7.
 
 ## Preserved historical obligations
 
@@ -52,9 +55,9 @@ the historical shapes; only survival snapshots carry `rules`.
 ## Intentional replacements of old requirements
 
 These are the deliberate survival changes. The empty-site boundary, stable
-dynamic building IDs/links, typed construction, names, rally input and the
-building finder and troop combat are implemented; movement, waves and cursor
-death remain pending with their units.
+dynamic building IDs/links, typed construction, names, rally input, the
+building finder, troop combat, waves, hostile movement, collision and cursor
+death are implemented; allied movement remains pending with unit 3.3.
 
 | Old first-playable behavior | Survival behavior | Owner |
 | --- | --- | --- |
@@ -64,13 +67,13 @@ death remain pending with their units.
 | Stationary slot imps | Living allies with stable IDs, HP and replacement production | 3.1 (implemented) |
 | Five-imps-per-ring total cap | Five living allies per origin ring; death frees a slot and replacements get fresh serials | 3.1 (implemented) |
 | No combat | Adjacent allies and enemies attack simultaneously with HP and cooldowns; enemies also damage the cursor | 3.1 (implemented) |
-| Immortal cursor | Cursor HP damaged in combat, then collision and game-over/restart | 3.1 (HP, implemented), 3.2 (collision/death) |
+| Immortal cursor | Cursor HP damaged in combat and on blocked collision; HP zero freezes play until Enter restarts | 3.1 (HP), 3.2 (collision/death) |
 | One fixed terrain composition | Deterministic landmarks, grass texture and the fixed enemy gate | 1.2 (gate), 2.1 (terrain) |
 | No building finder | Space `f` finder for names, types, IDs, rally and gate | 2.3 (implemented) |
 
 ## Survival interface additions
 
-Units 1.2, 2.1, 2.2 and 2.3 add these public interfaces without changing the historical ones:
+Units 1.2 through 3.2 add these public interfaces without changing the historical ones:
 
 - `game.place(world, center, kind)` places a survival well or ring with an
   `11x7` footprint centred on `(center.x, center.y)`. It returns the input world
@@ -131,14 +134,43 @@ Units 1.2, 2.1, 2.2 and 2.3 add these public interfaces without changing the his
   lowest HP then lexical ID, enemies prefer adjacent allies over the cursor, and
   all damage applies at once, so mutual kills are possible. Only attackers set
   `nextAttackTick=tick+10`; dead troops are removed and no longer count toward
-  the origin ring's living population. Waves, troop movement, input collision,
-  cursor game over and restart remain pending.
+  the origin ring's living population.
+- Survival observations expose `gameOver`, `wave` and `nextWaveTick`. Wave 1
+  starts at tick 300 and every 200 ticks thereafter, with size `min(wave + 2,
+  16)`; spawns use the fixed gate's 16-cell Chebyshev-distance-2 perimeter in
+  row-major order, skip live troops and the cursor, fill the first available
+  slots up to the wave size and the 128-enemy cap, and discard the remainder.
+  Enemy IDs use the wave and spawn ordinal. Enemies move on every fifth tick over
+  one BFS distance field from the cursor, in lexical ID order, choosing the first
+  unoccupied cardinal neighbour with a strictly smaller distance in
+  north/east/south/west order; adjacent enemies and enemies beside the cursor
+  hold. Earlier moves count as occupancy, so units may follow a vacated cell but
+  never overlap, swap or enter the cursor.
+- Every survival cursor displacement, including finder jumps, uses the shared
+  sweep. A hostile sample or diagonal side cell stops movement at the last safe
+  sample and, if that enemy's cooldown is ready, deals one damage and sets its
+  `nextAttackTick` to `elapsedTicks + 10`; later inputs in the same tick only
+  block. Cursor HP zero clears choices, drafts and source, drops the clock
+  remainder and freezes further input or elapsed time. An unblocked Enter starts
+  a fresh survival world. Allied movement remains pending.
 - `src/web/camera.ts` exports `GUTTER_COLUMNS = 4`, `GUTTER_WIDTH = 48`, an
   optional gutter parameter on `visibleCells`, and `gutterLabel`. Survival
   subtracts the gutter before viewport/camera math; the historical
   two-argument call and the first-playable render remain unchanged.
 
 ## Test and interface revisions
+
+Unit 3.2 adds `gameOver`, `wave` and `nextWaveTick` observations, the
+`ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL` and `WAVE_MAX_SIZE` exports,
+and browser `gameOver`/HP/wave datasets. `tests/core/survival-waves.test.ts`
+covers exact wave ticks and sizes, the enemy cap, occupied gate exits, hostile
+BFS order and congestion, collision across axis/line/find/word/finder paths,
+contact cooldowns, input and tick death, pause/hidden wave progress and elapsed
+partitioning through death. `tests/browser/survival-death.spec.ts` covers a real
+lethal key, game-over HUD status, ignored later keys, real Enter restart and no
+clock catch-up, plus a lethal tick that cancels an Insert draft. Existing
+scenarios and snapshots are unchanged because game-over and wave progress are
+derived from `cursorHp` and `elapsedTicks`.
 
 Unit 3.1 adds `living` to survival ring observations, plus `troops`, `cursorHp`
 and `kills` to observations and survival snapshots. Existing survival building
@@ -179,6 +211,7 @@ Routing is explicit, not an implicit behavior switch:
 Survival draws its deterministic terrain clusters, faint grass, the 4-cell
 relative-row gutter, the rally flag and troop glyphs. Browsing supports typed
 Insert construction, autocomplete, names, connections, the shared rally command
-and the building finder through real keys. Survival combat state is implemented
-in the core; faction colors, HP HUD, waves, movement, collision, game over and
-restart remain pending.
+and the building finder through real keys. Waves, hostile movement, collision,
+game over and restart are implemented in the core and browser clock; faction
+colors, the full HP/wave HUD, allied movement and the final end-to-end loop
+remain pending.

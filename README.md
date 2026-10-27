@@ -8,9 +8,10 @@ Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
 [nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), started. The
 rules-profile boundary, dynamic free placement, terrain, relative row numbers,
 typed/named construction, connections, a shared rally command, the building
-finder and living troop combat exist; troop movement, fixed-gate enemy waves and
-game over remain planned. The browser now defaults to survival with its terrain,
-gutter, typed construction, finder and troop state;
+finder, living troop combat and fixed-gate enemy waves with cursor collision and
+game over exist; allied movement remains planned. The browser now defaults to
+survival with its terrain, gutter, typed construction, finder, waves and troop
+state;
 `?rules=first-playable` selects the historical playable described below. See
 [survival coverage](docs/survival-coverage.md).
 
@@ -50,10 +51,13 @@ gate; movement applies the shared displacement sweep used by later collision.
 The pure core advances linked mana on exact 100 ms ticks. Legacy rings create up
 to five ordered stationary imps; survival rings keep living allies with HP and
 replacement production, and adjacent allies and enemies resolve simultaneous
-attacks with stable IDs and cooldowns. Survival exposes cursor HP and kills. The browser forwards monotonic frame time into that
-core, suspends without catch-up while the tab is hidden, and Normal `p` toggles
-manual pause; the HUD shows mana, link endpoints, ring population, mode, draft, source and
-simulation time. The execution plan runs under OpenCode /
+attacks with stable IDs and cooldowns. Fixed-gate waves arrive on scheduled
+ticks, enemies chase the cursor over deterministic distance fields, cursor
+movement stops before hostiles with contact damage, and death freezes play until
+Enter restarts. Survival exposes cursor HP, kills and wave state. The browser
+forwards monotonic frame time into that core, suspends without catch-up while the
+tab is hidden, and Normal `p` toggles manual pause; the HUD shows mana, link
+endpoints, ring population, mode, draft, source and simulation time. The execution plan runs under OpenCode /
 `deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
 measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).

@@ -160,6 +160,9 @@ export interface Observation {
   readonly troops: readonly TroopObservation[];
   readonly cursorHp: number;
   readonly kills: number;
+  readonly gameOver: boolean;
+  readonly wave: number;
+  readonly nextWaveTick: number;
 }
 
 export interface GlyphField {
@@ -332,6 +335,11 @@ export const CURSOR_MAX_HP = 10;
 export const ALLY_HP = 4;
 export const ENEMY_HP = 3;
 export const ATTACK_COOLDOWN = 10;
+export const ENEMY_CAP = 128;
+export const WAVE_START_TICK = 300;
+export const WAVE_INTERVAL = 200;
+export const WAVE_MAX_SIZE = 16;
+const MOVE_INTERVAL = 5;
 const worldSize = WORLD_WIDTH * WORLD_HEIGHT;
 const navigation = createNavigation({ columns: WORLD_WIDTH, rows: WORLD_HEIGHT });
 
@@ -1097,7 +1105,7 @@ function placeSurvival(state: InternalWorld, center: Cursor, kind: "well" | "rin
 
 export function place(world: World, center: Cursor, kind: "well" | "ring"): World {
   const state = data(world);
-  if (state.rules !== "survival" || state.navigationOnly) return world;
+  if (state.rules !== "survival" || state.navigationOnly || isGameOver(state)) return world;
   if (kind !== "well" && kind !== "ring") return world;
   if (!isRecord(center)) return world;
   const result = placeSurvival(state, center, kind);
@@ -1106,7 +1114,7 @@ export function place(world: World, center: Cursor, kind: "well" | "ring"): Worl
 
 export function link(world: World, source: BuildingId, target: BuildingId): World {
   const state = data(world);
-  if (state.navigationOnly) return world;
+  if (state.navigationOnly || isGameOver(state)) return world;
   const dynamic = state.rules === "survival";
   if (dynamic) {
     if (!isDynamicBuildingId(source) || !isDynamicBuildingId(target)) return world;
@@ -1246,6 +1254,159 @@ function combatPhase(
   };
 }
 
+const MOVE_OFFSETS = [
+  { x: 0, y: -1 },
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+  { x: -1, y: 0 },
+] as const;
+
+function inWorld(x: number, y: number): boolean {
+  return x >= 0 && y >= 0 && x < WORLD_WIDTH && y < WORLD_HEIGHT;
+}
+
+function cellKey(cell: Cursor): string {
+  return `${cell.x},${cell.y}`;
+}
+
+function distanceAt(field: Int32Array, cell: Cursor): number {
+  return field[cell.y * WORLD_WIDTH + cell.x] ?? -1;
+}
+
+function distanceField(sources: readonly Cursor[]): Int32Array {
+  const distances = new Int32Array(worldSize);
+  distances.fill(-1);
+  const queue: number[] = [];
+  for (const source of sources) {
+    if (!inWorld(source.x, source.y)) continue;
+    const index = source.y * WORLD_WIDTH + source.x;
+    if (distances[index] !== -1) continue;
+    distances[index] = 0;
+    queue.push(index);
+  }
+  for (let head = 0; head < queue.length; head++) {
+    const index = queue[head] ?? 0;
+    const x = index % WORLD_WIDTH;
+    const y = Math.floor(index / WORLD_WIDTH);
+    const next = (distances[index] ?? 0) + 1;
+    for (const offset of MOVE_OFFSETS) {
+      const nx = x + offset.x;
+      const ny = y + offset.y;
+      if (!inWorld(nx, ny)) continue;
+      const nextIndex = ny * WORLD_WIDTH + nx;
+      if (distances[nextIndex] !== -1) continue;
+      distances[nextIndex] = next;
+      queue.push(nextIndex);
+    }
+  }
+  return distances;
+}
+
+function moveHostiles(state: InternalWorld, troops: readonly Troop[]): readonly Troop[] {
+  if (!troops.some(troop => troop.faction === "enemy")) return troops;
+  const distances = distanceField([state.cursor]);
+  const occupied = new Set(troops.map(cellKey));
+  occupied.add(cellKey(state.cursor));
+  const moved = [...troops];
+  for (const ordered of troops.filter(troop => troop.faction === "enemy").sort(compareTroopIds)) {
+    const index = moved.findIndex(troop => troop.id === ordered.id);
+    const enemy = moved[index];
+    if (!enemy || enemy.faction !== "enemy") continue;
+    if (adjacent(enemy, state.cursor)) continue;
+    if (moved.some(troop => troop.faction === "ally" && adjacent(troop, enemy))) continue;
+    const currentDistance = distanceAt(distances, enemy);
+    if (currentDistance <= 0) continue;
+    const here = cellKey(enemy);
+    for (const offset of MOVE_OFFSETS) {
+      const x = enemy.x + offset.x;
+      const y = enemy.y + offset.y;
+      if (!inWorld(x, y)) continue;
+      if (x === state.cursor.x && y === state.cursor.y) continue;
+      const there = cellKey({ x, y });
+      if (occupied.has(there)) continue;
+      const distance = distanceAt(distances, { x, y });
+      if (distance < 0 || distance >= currentDistance) continue;
+      occupied.delete(here);
+      occupied.add(there);
+      moved[index] = { ...enemy, x, y };
+      break;
+    }
+  }
+  return moved;
+}
+
+const GATE_PERIMETER: readonly Cursor[] = (() => {
+  const cells: Cursor[] = [];
+  for (let y = GATE_CENTER.y - 2; y <= GATE_CENTER.y + 2; y++) {
+    for (let x = GATE_CENTER.x - 2; x <= GATE_CENTER.x + 2; x++) {
+      if (Math.max(Math.abs(x - GATE_CENTER.x), Math.abs(y - GATE_CENTER.y)) === 2) cells.push({ x, y });
+    }
+  }
+  return cells;
+})();
+
+function waveAt(tick: number): number | null {
+  if (tick < WAVE_START_TICK) return null;
+  if ((tick - WAVE_START_TICK) % WAVE_INTERVAL !== 0) return null;
+  return Math.floor((tick - WAVE_START_TICK) / WAVE_INTERVAL) + 1;
+}
+
+function waveState(tick: number): { readonly wave: number; readonly nextWaveTick: number } {
+  if (tick < WAVE_START_TICK) return { wave: 0, nextWaveTick: WAVE_START_TICK };
+  const wave = Math.floor((tick - WAVE_START_TICK) / WAVE_INTERVAL) + 1;
+  return { wave, nextWaveTick: WAVE_START_TICK + wave * WAVE_INTERVAL };
+}
+
+function spawnWave(state: InternalWorld, troops: readonly Troop[], tick: number): readonly Troop[] {
+  const wave = waveAt(tick);
+  if (wave === null) return troops;
+  const livingEnemies = troops.filter(troop => troop.faction === "enemy").length;
+  const capacity = Math.max(0, Math.min(
+    Math.min(wave + 2, WAVE_MAX_SIZE),
+    ENEMY_CAP - livingEnemies,
+  ));
+  if (capacity === 0) return troops;
+  const occupied = new Set(troops.map(cellKey));
+  occupied.add(cellKey(state.cursor));
+  const cells = GATE_PERIMETER.filter(cell => !occupied.has(cellKey(cell))).slice(0, capacity);
+  if (cells.length === 0) return troops;
+  const ids = new Set(troops.map(troop => troop.id));
+  const spawned: Troop[] = [];
+  let ordinal = 0;
+  for (const cell of cells) {
+    let id: string;
+    do {
+      ordinal++;
+      id = `e${wave}-${ordinal}`;
+    } while (ids.has(id));
+    ids.add(id);
+    spawned.push({
+      id,
+      faction: "enemy",
+      ring: null,
+      serial: null,
+      x: cell.x,
+      y: cell.y,
+      hp: ENEMY_HP,
+      nextAttackTick: tick + ATTACK_COOLDOWN,
+    });
+  }
+  return [...troops, ...spawned];
+}
+
+function isGameOver(state: InternalWorld): boolean {
+  return state.rules === "survival" && state.cursorHp <= 0;
+}
+
+function terminal(state: InternalWorld): InternalWorld {
+  return {
+    ...cancelInteraction(state),
+    cursorHp: 0,
+    remainderMs: 0,
+    notice: "Game over — Enter restart",
+  };
+}
+
 function tickWorld(state: InternalWorld): InternalWorld {
   const tick = state.elapsedTicks + 1;
   let buildings = new Map(state.buildings);
@@ -1259,23 +1420,26 @@ function tickWorld(state: InternalWorld): InternalWorld {
     const summoned = summonSurvival(state, buildings, troops, tick);
     buildings = summoned.buildings;
     troops = summoned.troops;
+    troops = spawnWave(state, troops, tick);
+    if (tick % MOVE_INTERVAL === 0) troops = moveHostiles(state, troops);
     const fought = combatPhase(troops, state.cursor, cursorHp, tick);
     troops = fought.troops;
     cursorHp = fought.cursorHp;
     kills += fought.kills;
-  } else {
-    const ids = SITE_DEFINITIONS.map(site => site.id);
-    generate(buildings, ids);
-    transfer(buildings, ids);
-    summonLegacy(buildings, ids);
+    const next = { ...state, buildings, troops, cursorHp, kills, elapsedTicks: tick };
+    return cursorHp === 0 ? terminal(next) : next;
   }
+  const ids = SITE_DEFINITIONS.map(site => site.id);
+  generate(buildings, ids);
+  transfer(buildings, ids);
+  summonLegacy(buildings, ids);
   return { ...state, buildings, troops, cursorHp, kills, elapsedTicks: tick };
 }
 
 export function advance(world: World, milliseconds: number): World {
   const state = data(world);
   const elapsedMs = safeInteger(milliseconds, "elapsed ms");
-  if (state.manualPaused || state.suspended) return world;
+  if (isGameOver(state) || state.manualPaused || state.suspended) return world;
   const total = BigInt(state.remainderMs) + BigInt(elapsedMs);
   const ticks = total / BigInt(TICK_MS);
   const remainderMs = Number(total % BigInt(TICK_MS));
@@ -1287,7 +1451,10 @@ export function advance(world: World, milliseconds: number): World {
     fail("elapsed ticks exceed the safe integer domain");
   }
   let next = state;
-  for (let index = 0n; index < ticks; index++) next = tickWorld(next);
+  for (let index = 0n; index < ticks; index++) {
+    next = tickWorld(next);
+    if (isGameOver(next)) return construct({ ...next, remainderMs: 0 });
+  }
   return construct({
     ...next,
     remainderMs,
@@ -1626,17 +1793,23 @@ function nameStep(world: World, state: InternalWorld, key: string): World {
 interface Displacement {
   readonly cursor: Cursor;
   readonly blockedBy: Cursor | null;
+  readonly enemy: Troop | null;
 }
 
-function hostileAt(state: InternalWorld, x: number, y: number): boolean {
-  return impsOf(state).some(imp => imp.x === x && imp.y === y);
+interface CursorMove {
+  readonly state: InternalWorld;
+  readonly blockedBy: Cursor | null;
+}
+
+function hostileAt(state: InternalWorld, x: number, y: number): Troop | null {
+  return state.troops.find(troop => troop.faction === "enemy" && troop.x === x && troop.y === y) ?? null;
 }
 
 function survivalDisplacement(state: InternalWorld, from: Cursor, to: Cursor): Displacement {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const distance = Math.max(Math.abs(dx), Math.abs(dy));
-  if (distance === 0) return { cursor: { ...from }, blockedBy: null };
+  if (distance === 0) return { cursor: { ...from }, blockedBy: null, enemy: null };
   const sign = (value: number): number => value < 0 ? -1 : value > 0 ? 1 : 0;
   let accepted: Cursor = { ...from };
   for (let step = 1; step <= distance; step++) {
@@ -1644,15 +1817,35 @@ function survivalDisplacement(state: InternalWorld, from: Cursor, to: Cursor): D
     const y = from.y + sign(dy) * Math.floor((2 * step * Math.abs(dy) + distance) / (2 * distance));
     if (x !== accepted.x && y !== accepted.y) {
       const xSide = { x, y: accepted.y };
-      if (hostileAt(state, xSide.x, xSide.y)) return { cursor: accepted, blockedBy: xSide };
+      const xEnemy = hostileAt(state, xSide.x, xSide.y);
+      if (xEnemy !== null) return { cursor: accepted, blockedBy: xSide, enemy: xEnemy };
       const ySide = { x: accepted.x, y };
-      if (hostileAt(state, ySide.x, ySide.y)) return { cursor: accepted, blockedBy: ySide };
+      const yEnemy = hostileAt(state, ySide.x, ySide.y);
+      if (yEnemy !== null) return { cursor: accepted, blockedBy: ySide, enemy: yEnemy };
     }
     const sample = { x, y };
-    if (hostileAt(state, sample.x, sample.y)) return { cursor: accepted, blockedBy: sample };
+    const enemy = hostileAt(state, sample.x, sample.y);
+    if (enemy !== null) return { cursor: accepted, blockedBy: sample, enemy };
     accepted = sample;
   }
-  return { cursor: accepted, blockedBy: null };
+  return { cursor: accepted, blockedBy: null, enemy: null };
+}
+
+function contact(state: InternalWorld, enemy: Troop): InternalWorld {
+  if (enemy.nextAttackTick > state.elapsedTicks) return state;
+  const troops = state.troops.map(troop => troop.id === enemy.id
+    ? { ...troop, nextAttackTick: state.elapsedTicks + ATTACK_COOLDOWN }
+    : troop);
+  const cursorHp = Math.max(0, state.cursorHp - 1);
+  const next = { ...state, troops, cursorHp };
+  return cursorHp === 0 ? terminal(next) : next;
+}
+
+function moveCursor(state: InternalWorld, destination: Cursor): CursorMove {
+  const moved = survivalDisplacement(state, state.cursor, destination);
+  let next: InternalWorld = { ...state, cursor: { ...moved.cursor } };
+  if (moved.enemy !== null) next = contact(next, moved.enemy);
+  return { state: next, blockedBy: moved.blockedBy };
 }
 
 function finderDestination(state: InternalWorld, entry: FinderEntry): Cursor | null {
@@ -1716,12 +1909,13 @@ function finderStep(world: World, state: InternalWorld, key: string): World {
       return construct({ ...state, notice: "Finder destination is unavailable" });
     }
     const moved = state.navigationOnly
-      ? { cursor: destination, blockedBy: null }
-      : survivalDisplacement(state, state.cursor, destination);
+      ? { state: { ...state, cursor: destination }, blockedBy: null }
+      : moveCursor(state, destination);
+    if (isGameOver(moved.state)) return construct(moved.state);
     const notice = moved.blockedBy === null
       ? ""
       : `Blocked by hostile at ${moved.blockedBy.x},${moved.blockedBy.y}`;
-    return closeFinder(state, moved.cursor, notice);
+    return closeFinder(moved.state, moved.state.cursor, notice);
   }
   if (!printable(key)) return world;
   if (Array.from(state.draft).length >= 32) return world;
@@ -1748,9 +1942,6 @@ function cancelInteraction(state: InternalWorld): InternalWorld {
 export function dispatch(world: World, event: GameEvent): World {
   const state = data(world);
   if (event.type === "blur") return construct(cancelInteraction(state));
-  if (event.type === "build") return build(world, event.site, event.kind);
-  if (event.type === "link") return link(world, event.source, event.target);
-  if (event.type === "elapsed") return advance(world, event.ms);
   if (event.type === "visibility") {
     if (typeof event.hidden !== "boolean") throw new Error("Unsupported game event.");
     return construct({
@@ -1759,6 +1950,15 @@ export function dispatch(world: World, event: GameEvent): World {
       remainderMs: 0,
     });
   }
+  if (isGameOver(state)) {
+    if (event.type === "key" && event.blocked !== true && event.key === "Enter") {
+      return initial({ rules: "survival" });
+    }
+    return world;
+  }
+  if (event.type === "build") return build(world, event.site, event.kind);
+  if (event.type === "link") return link(world, event.source, event.target);
+  if (event.type === "elapsed") return advance(world, event.ms);
   if (event.type !== "key") throw new Error("Unsupported game event.");
   if (event.blocked === true) return world;
   if (state.mode.$ === "Insert") {
@@ -1841,14 +2041,18 @@ export function dispatch(world: World, event: GameEvent): World {
     && next.mode.count === state.mode.count
   ) return world;
   const destination = navigation.cursor(next.position);
-  const cursor = state.rules === "survival" && !state.navigationOnly
-    ? survivalDisplacement(state, state.cursor, destination).cursor
-    : destination;
-  return construct({ ...state, cursor, mode: next.mode });
+  const moved = state.rules === "survival" && !state.navigationOnly
+    ? moveCursor(state, destination)
+    : { state: { ...state, cursor: destination }, blockedBy: null };
+  if (isGameOver(moved.state)) return construct(moved.state);
+  return construct({ ...moved.state, mode: next.mode });
 }
 
 export function observe(world: World): Observation {
   const state = data(world);
+  const waves = state.rules === "survival" && !state.navigationOnly
+    ? waveState(state.elapsedTicks)
+    : { wave: 0, nextWaveTick: 0 };
   const sites: Partial<Record<SiteId, SiteObservation>> = {};
   const buildings: BuildingObservation[] = [];
   const links: LinkObservation[] = [];
@@ -1965,6 +2169,9 @@ export function observe(world: World): Observation {
     troops,
     cursorHp: state.cursorHp,
     kills: state.kills,
+    gameOver: isGameOver(state),
+    wave: waves.wave,
+    nextWaveTick: waves.nextWaveTick,
   };
 }
 

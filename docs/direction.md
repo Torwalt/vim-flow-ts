@@ -30,9 +30,11 @@ deterministic terrain, grass, relative row gutter, typed construction, names,
 connections, shared rally command and building finder. Living allies now have
 stable IDs, HP and attack cooldowns; survival rings replace dead allies on their
 first free spawn exit, and adjacent troops fight in one simultaneous combat
-phase with cursor HP and a kill count. `?rules=first-playable` selects the
-historical playable explicitly. Waves, troop movement, collision and game over
-remain pending. The live map is
+phase with cursor HP and a kill count. Fixed-gate enemy waves now spawn on exact
+ticks, chase over deterministic distance fields, stop cursor displacement with
+shared contact cooldowns, and freeze at cursor death until Enter restarts.
+Allied movement remains pending. `?rules=first-playable` selects the historical
+playable explicitly. The live map is
 [survival coverage](survival-coverage.md).
 
 ## What runs now
@@ -49,8 +51,11 @@ survival profile types construction with `i`, opens the building finder with
 Space `f`, and sends every cursor displacement, including finder jumps, through
 one shared sweep. Linked wells feed rings on exact 100 ms ticks; legacy rings
 summon five ordered stationary imps while survival rings track living allies and
-replace the dead, Normal `p` pauses, and hidden tabs suspend without catch-up. The HUD shows resources, link endpoints, production, mode and
-simulation time. Bun serves and bundles; Nix pins tools; Bun and Chromium check
+replace the dead. Survival waves arrive at the fixed gate, enemies move on
+500 ms phases and attack the cursor, collision applies the same contact
+cooldown, and game over freezes all time until Enter restarts. Normal `p` pauses,
+and hidden tabs suspend without catch-up. The HUD shows resources, link
+endpoints, production, mode and simulation time. Bun serves and bundles; Nix pins tools; Bun and Chromium check
 contract, core and development/production browser behavior.
 
 ## Completion
