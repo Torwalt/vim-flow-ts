@@ -4,14 +4,14 @@ A small Vim-controlled ASCII RTS in TypeScript/Bun. The independent Bend/TS
 comparison is paused. Continue this game here; reconsider a Bend rewrite after
 the design stabilizes. Historical measurements remain in the linked notes.
 
-Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
-[nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), started. The
-rules-profile boundary, dynamic free placement, terrain, relative row numbers,
-typed/named construction, connections, a shared rally command, the building
-finder, living troop combat, fixed-gate enemy waves with cursor collision and
-game over, and shared-rally allied movement with enemy pursuit exist. The browser
-now defaults to survival with its terrain, gutter, typed construction, finder,
-waves and troop state;
+The implemented [cursor survival authority](docs/cursor-survival.md) records
+the current default game; its [nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md)
+is in its final unit. Survival includes dynamic free placement, terrain,
+relative row numbers, typed/named construction, connections, a shared rally
+command, the building finder, living troop combat, fixed-gate enemy waves with
+cursor collision and game over, and shared-rally allied movement with enemy
+pursuit. The browser defaults to survival with cyan allies, orange enemies,
+faction markers, injured health bars and an HP/wave/kills/population HUD;
 `?rules=first-playable` selects the historical playable described below. See
 [survival coverage](docs/survival-coverage.md).
 
@@ -55,10 +55,12 @@ and adjacent allies and enemies resolve simultaneous attacks with stable IDs and
 cooldowns. Fixed-gate waves arrive on scheduled ticks, enemies chase the cursor
 over deterministic distance fields, cursor
 movement stops before hostiles with contact damage, and death freezes play until
-Enter restarts. Survival exposes cursor HP, kills and wave state. The browser
-forwards monotonic frame time into that core, suspends without catch-up while the
-tab is hidden, and Normal `p` toggles manual pause; the HUD shows mana, link
-endpoints, ring population, mode, draft, source and simulation time. The execution plan runs under OpenCode /
+Enter restarts. Survival presents distinct cyan ally and orange enemy glyphs,
+non-color faction markers, injured health bars and an HP/wave/kills/population
+HUD; the game-over overlay names the restart key. The browser forwards monotonic
+frame time into that core, suspends without catch-up while the tab is hidden, and
+Normal `p` toggles manual pause; the HUD also shows mana, link endpoints, ring
+population, mode, draft, source and simulation time. The execution plan runs under OpenCode /
 `deepseek/deepseek-flash`, high effort, with no secondary or rescue; evidence and
 measurements are in
 [execution evidence](../notes/zettelkasten/vim-game-bend-typescript-navigation.md).

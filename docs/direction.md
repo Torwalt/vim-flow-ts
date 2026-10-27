@@ -12,30 +12,32 @@ and the linked mana/imp economy run with visible monotonic time.
 The completed [first-playable authority](first-playable.md) preserves the
 measured behavior. Its execution plan has been closed and landed.
 
-## Next pass (2026-10-27)
+## Survival pass (2026-10-27)
 
 The author paused independent Bend/TypeScript comparison. Continue the small
 game in TypeScript; reconsider a Bend rewrite after playtesting stabilizes rules
 and the codebase is substantial enough. No ongoing parity obligation.
 
-[Cursor survival](plans/CURSOR_SURVIVAL.md) specifies the next pass:
-faint rendered grass over logical whitespace, real terrain landmarks, relative
-row numbers, typed/autocompleted construction with optional names, Space f
-building finder, free placement, shared rally, moving allies, fixed-gate hostile
-waves, collision and cursor health.
-[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has nine units. Started with the
-rules-profile boundary and empty survival scenario; defaults are planner choices
-under the author's request. The browser now defaults to survival with its
-deterministic terrain, grass, relative row gutter, typed construction, names,
-connections, shared rally command and building finder. Living allies now have
-stable IDs, HP and attack cooldowns; survival rings replace dead allies on their
-first free spawn exit, and adjacent troops fight in one simultaneous combat
-phase with cursor HP and a kill count. Fixed-gate enemy waves now spawn on exact
-ticks, chase over deterministic distance fields, stop cursor displacement with
-shared contact cooldowns, and freeze at cursor death until Enter restarts.
-Allies travel to the latest shared rally, pursue enemies within six path cells,
-hold adjacent combat and resume the rally afterward. `?rules=first-playable`
-selects the historical playable explicitly. The live map is
+The implemented [cursor survival authority](cursor-survival.md) is the current
+default game. It specifies faint rendered grass over logical whitespace, real
+terrain landmarks, relative row numbers, typed/autocompleted construction with
+optional names, Space f building finder, free placement, shared rally, moving
+allies, fixed-gate hostile waves, collision and cursor health. Its defaults are
+planner choices under the author's request; the [execution
+plan](plans/CURSOR_SURVIVAL_EXECUTION.md) is in its final unit. The browser
+defaults to survival with deterministic terrain, grass, the relative row gutter,
+typed construction, names, connections, the shared rally command and the
+building finder. Living allies have stable IDs, HP and attack cooldowns;
+survival rings replace dead allies on their first free spawn exit, and adjacent
+troops fight in one simultaneous combat phase with cursor HP and a kill count.
+Fixed-gate enemy waves spawn on exact ticks, chase over deterministic distance
+fields, stop cursor displacement with shared contact cooldowns, and freeze at
+cursor death until Enter restarts. Allies travel to the latest shared rally,
+pursue enemies within six path cells, hold adjacent combat and resume the rally
+afterward. Cyan allies, orange enemies, non-color faction markers, injured
+health bars, the HP/wave/kills/population HUD and the restart overlay make the
+state readable without relying on color alone. `?rules=first-playable` selects
+the historical playable explicitly. The live map is
 [survival coverage](survival-coverage.md).
 
 ## What runs now
@@ -56,7 +58,9 @@ replace the dead and send them to the shared rally. Survival waves arrive at the
 fixed gate, allies and enemies move on 500 ms phases, collision applies the same
 contact cooldown, and game over freezes all time until Enter restarts. Normal `p`
 pauses, and hidden tabs suspend without catch-up. The HUD shows resources, link
-endpoints, production, mode and simulation time. Bun serves and bundles; Nix pins tools; Bun and Chromium check
+endpoints, production, mode, simulation time, cursor health, wave timing, kills
+and living population; the game-over overlay shows the restart key. Bun serves
+and bundles; Nix pins tools; Bun and Chromium check
 contract, core and development/production browser behavior.
 
 ## Completion

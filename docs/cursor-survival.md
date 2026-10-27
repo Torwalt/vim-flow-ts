@@ -1,6 +1,6 @@
-# Cursor survival: terrain, typed building and a building finder
+# Cursor survival
 
-Status: TypeScript-only next-pass authority, written 2026-10-27 against `fc960b9` (extended before execution).
+Status: implemented survival authority, written 2026-10-27 against `fc960b9` (extended before execution).
 This is a small playable iteration. Numerical values and algorithms below are
 planner defaults chosen under the author's request to fill the blanks; they are
 not measured balance or additional author quotations.

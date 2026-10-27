@@ -1,5 +1,5 @@
 ---
-authority: docs/plans/CURSOR_SURVIVAL.md
+authority: docs/cursor-survival.md
 test: yes
 ---
 
@@ -17,7 +17,7 @@ decisions. Author extension: freely place buildings, set a shared rally point,
 and fight at a fixed enemy spawn. Planner defaults keep one global rally command
 and simple deterministic troop movement; no individual-unit control.
 
-The authority is docs/plans/CURSOR_SURVIVAL.md. Frozen first-playable artifacts
+The authority is docs/cursor-survival.md. Frozen first-playable artifacts
 are historical acceptance, not editable new gameplay specifications. Preserve
 the 40x20 navigation facade. Browser defaults change only when the new input UI
 lands. No Bend work, new benchmark campaign or general engine abstraction.

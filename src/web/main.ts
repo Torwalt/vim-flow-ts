@@ -1,4 +1,7 @@
 import {
+  ALLY_HP,
+  CURSOR_MAX_HP,
+  ENEMY_HP,
   SITE_HEIGHT,
   SITE_WIDTH,
   WORLD_HEIGHT,
@@ -8,6 +11,7 @@ import {
   type Observation,
   type RulesProfile,
   type SiteId,
+  type TroopObservation,
   type World,
 } from "../core/game";
 import {
@@ -34,6 +38,9 @@ const colors = {
   gutterCurrent: "#223126",
   field: "#d9ddcb",
   imp: "#f5c451",
+  ally: "#5ad2c4",
+  enemy: "#e47a52",
+  healthBack: "#313b34",
   cursor: "#f5c451",
   cursorGlyph: "#111714",
   preview: "#8fb3c7",
@@ -46,6 +53,8 @@ const colors = {
   finderText: "#c6d4b4",
   finderMuted: "#7f9179",
   finderSelected: "#263a29",
+  gameOverPanel: "#2a1716",
+  gameOverBorder: "#e47a52",
 };
 
 function required<T extends Element>(selector: string): T {
@@ -69,6 +78,10 @@ const context = context2d(canvas);
 const hudSite = document.querySelector<HTMLElement>("#hud-site");
 const hudResources = document.querySelector<HTMLElement>("#hud-resources");
 const hudMode = document.querySelector<HTMLElement>("#hud-mode");
+const hudHp = document.querySelector<HTMLElement>("#hud-hp");
+const hudWave = document.querySelector<HTMLElement>("#hud-wave");
+const hudKills = document.querySelector<HTMLElement>("#hud-kills");
+const hudPop = document.querySelector<HTMLElement>("#hud-pop");
 const hudCursor = document.querySelector<HTMLElement>("#hud-cursor");
 const hudSource = document.querySelector<HTMLElement>("#hud-source");
 const hudRally = document.querySelector<HTMLElement>("#hud-rally");
@@ -226,6 +239,38 @@ function terrainColor(glyph: string, x: number, y: number, observation: Observat
   return colors.field;
 }
 
+function troopColor(troop: TroopObservation): string {
+  return troop.faction === "ally" ? colors.ally : colors.enemy;
+}
+
+function troopMaxHp(troop: TroopObservation): number {
+  return troop.faction === "ally" ? ALLY_HP : ENEMY_HP;
+}
+
+function troopAt(observation: Observation, x: number, y: number): TroopObservation | undefined {
+  return observation.troops.find(troop => troop.x === x && troop.y === y);
+}
+
+function nearbyHealth(observation: Observation): string {
+  const cursor = observation.cursor;
+  const nearby = observation.troops
+    .filter(troop => Math.max(Math.abs(troop.x - cursor.x), Math.abs(troop.y - cursor.y)) <= 1)
+    .sort((left, right) => {
+      const leftDistance = Math.abs(left.x - cursor.x) + Math.abs(left.y - cursor.y);
+      const rightDistance = Math.abs(right.x - cursor.x) + Math.abs(right.y - cursor.y);
+      return leftDistance - rightDistance || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+    });
+  const closest = nearby[0];
+  if (!closest) return "";
+  const extra = nearby.length > 1 ? ` +${nearby.length - 1}` : "";
+  return ` · near ${closest.faction} ${closest.id} ${closest.hp}/${troopMaxHp(closest)}${extra}`;
+}
+
+function waveLabel(observation: Observation): string {
+  const seconds = Math.max(0, observation.nextWaveTick - observation.elapsedTicks) / 10;
+  return `wave ${observation.wave} · next ${seconds.toFixed(1)}s`;
+}
+
 function drawGutter(observation: Observation, rows: number): void {
   context.save();
   context.textAlign = "right";
@@ -304,6 +349,70 @@ function drawRally(observation: Observation): void {
   context.lineTo(left + 3, top + 8);
   context.closePath();
   context.fill();
+  context.restore();
+}
+
+function drawTroopMarkers(observation: Observation): void {
+  for (const troop of observation.troops) {
+    const column = troop.x - camera.x;
+    const row = troop.y - camera.y;
+    if (column < 0 || column >= viewport.columns || row < 0 || row >= viewport.rows) continue;
+    const left = gutterPixels + column * CELL_WIDTH;
+    const top = row * CELL_HEIGHT;
+    const color = troopColor(troop);
+    context.save();
+    context.fillStyle = color;
+    if (troop.faction === "ally") {
+      context.fillRect(left + 3, top + 2, 6, 1.5);
+    } else {
+      context.beginPath();
+      context.moveTo(left + CELL_WIDTH - 4, top + 1.5);
+      context.lineTo(left + CELL_WIDTH - 1.5, top + 4);
+      context.lineTo(left + CELL_WIDTH - 4, top + 6.5);
+      context.lineTo(left + CELL_WIDTH - 6.5, top + 4);
+      context.closePath();
+      context.fill();
+    }
+    const maximum = troopMaxHp(troop);
+    if (troop.hp < maximum) {
+      const width = CELL_WIDTH - 4;
+      const filled = Math.max(2, Math.round(width * troop.hp / maximum));
+      context.fillStyle = colors.healthBack;
+      context.fillRect(left + 2, top + CELL_HEIGHT - 4, width, 2);
+      context.fillStyle = color;
+      context.fillRect(left + 2, top + CELL_HEIGHT - 4, filled, 2);
+    }
+    context.restore();
+  }
+}
+
+function drawGameOver(observation: Observation, cssWidth: number, cssHeight: number): void {
+  if (!observation.gameOver) return;
+  const available = cssWidth - gutterPixels;
+  const width = Math.min(420, Math.max(180, available - 32));
+  const height = 96;
+  const left = gutterPixels + Math.max(8, (available - width) / 2);
+  const top = Math.max(8, (cssHeight - height) / 2);
+  context.save();
+  context.fillStyle = colors.gameOverPanel;
+  context.fillRect(left, top, width, height);
+  context.strokeStyle = colors.gameOverBorder;
+  context.lineWidth = 2;
+  context.strokeRect(left + 1, top + 1, width - 2, height - 2);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = colors.enemy;
+  context.font = 'bold 20px "SFMono-Regular", Consolas, "Liberation Mono", monospace';
+  context.fillText("GAME OVER", left + width / 2, top + 28);
+  context.fillStyle = colors.field;
+  context.font = '12px "SFMono-Regular", Consolas, "Liberation Mono", monospace';
+  context.fillText(
+    `wave ${observation.wave} · kills ${observation.kills} · HP 0/${CURSOR_MAX_HP}`,
+    left + width / 2,
+    top + 55,
+  );
+  context.fillStyle = colors.gameOverBorder;
+  context.fillText("Press Enter to restart", left + width / 2, top + 75);
   context.restore();
 }
 
@@ -424,9 +533,11 @@ function render(): void {
         if (survival) drawCell(".", column, row, colors.grass);
         continue;
       }
-      drawCell(glyph, column, row, survival
-        ? terrainColor(glyph, worldColumn, worldRow, observation)
-        : glyph === "i" ? colors.imp : colors.field);
+      const troop = survival ? troopAt(observation, worldColumn, worldRow) : undefined;
+      drawCell(glyph, column, row, troop
+        ? troopColor(troop)
+        : survival ? terrainColor(glyph, worldColumn, worldRow, observation)
+          : glyph === "i" ? colors.imp : colors.field);
     }
   }
 
@@ -457,19 +568,29 @@ function render(): void {
   }
 
   drawRally(observation);
+  drawTroopMarkers(observation);
   drawFinder(observation, cssWidth, cssHeight);
+  drawGameOver(observation, cssWidth, cssHeight);
 
+  const allies = observation.troops.filter(troop => troop.faction === "ally").length;
+  const enemies = observation.troops.length - allies;
   const site = describeSite(observation);
   setText(hudSite, site.label);
   setText(hudResources, site.resources);
   setText(hudMode, modeLabel(observation));
+  setText(hudHp, survival ? `HP ${observation.cursorHp}/${CURSOR_MAX_HP}${nearbyHealth(observation)}` : "");
+  setText(hudWave, survival ? waveLabel(observation) : "");
+  setText(hudKills, survival ? `kills ${observation.kills}` : "");
+  setText(hudPop, survival ? `allies ${allies} · enemies ${enemies}` : "");
   setText(hudCursor, `${cursorX},${cursorY} · ${camera.x},${camera.y}`);
   setText(hudSource, `source ${observation.pendingSource ?? "—"}`);
   setText(hudRally, observation.rally === null ? "rally —" : `rally ${observation.rally.x},${observation.rally.y}`);
   setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
   setText(hudNotice, observation.notice);
   setText(hudClock, clockLabel(observation));
-  setText(hudLegend, survival ? "grass . is whitespace · i rally Enter" : "");
+  setText(hudLegend, survival
+    ? "ally _ cyan · enemy ^ orange · grass . is whitespace · i rally Enter"
+    : "");
 
   canvas.dataset.cursorX = String(cursorX);
   canvas.dataset.cursorY = String(cursorY);
@@ -521,6 +642,8 @@ function render(): void {
   canvas.dataset.gameOver = String(observation.gameOver);
   canvas.dataset.wave = String(observation.wave);
   canvas.dataset.nextWaveTick = String(observation.nextWaveTick);
+  canvas.dataset.allies = String(allies);
+  canvas.dataset.enemies = String(enemies);
   canvas.dataset.ready = "true";
 }
 

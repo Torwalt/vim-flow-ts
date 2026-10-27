@@ -1,15 +1,14 @@
 # Survival coverage
 
-Authority: [Cursor survival](plans/CURSOR_SURVIVAL.md). This map covers the
+Authority: [Cursor survival](../cursor-survival.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
 placement, the fixed gate, deterministic terrain, the relative row gutter,
 typed construction, names, connections, the shared rally command, the building
 finder, living troop combat, fixed-gate waves, hostile chasing, cursor collision,
-game over and allied rally movement. Clauses owned by later units are marked
-pending; they are not claimed as implemented.
+game over, allied rally movement, faction presentation and end-to-end browser
+acceptance. Every authority clause is implemented or explicitly preserved.
 
-Status values: **implemented**, **preserved** (historical behavior kept), and
-**pending** (named execution unit owns it).
+Status values: **implemented** and **preserved** (historical behavior kept).
 
 ## Authority §2 - profiles and scope
 
@@ -25,18 +24,22 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 
 ## Authority §§3-8 - feature map
 
-| Section | Expected exported operations | Evidence | Owner | Status |
-| --- | --- | --- | --- | --- |
+| Section | Expected exported operations | Evidence | Status |
+| --- | --- | --- | --- |
 | §3 terrain, landmarks, grass, gutter and relative row numbers | `game.field`, `game.glyphAt`, `game.dispatch`; web `visibleCells`, `followCamera`, `gutterLabel`, `render` | `tests/core/survival-terrain.test.ts`, `tests/browser/survival-terrain.spec.ts` | implemented |
 | §4 dynamic building identity, cursor-centred 11x7 placement, overlap/gate/edge validation, 32-building cap and dynamic links | `game.place`, `game.link`, `game.scenario`, `game.snapshot`, `game.observe`, `game.siteAt` | `tests/core/survival-buildings.test.ts` | implemented |
 | §4 typed Insert construction, autocomplete, names, shared rally commands and connect through input | `game.dispatch`, `game.observe`, `game.snapshot`, `game.place` | `tests/core/survival-construction.test.ts`, `tests/browser/survival-construction.spec.ts` | implemented |
 | §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | `tests/core/survival-finder.test.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
-| §6 living troop identity, HP, cooldowns, replacement production and simultaneous combat | `game.advance`, `game.scenario`, `game.snapshot`, `game.observe`, `game.imps`; exported `ALLY_HP`, `ENEMY_HP`, `CURSOR_MAX_HP`, `ATTACK_COOLDOWN` | `tests/core/survival-combat.test.ts`; legacy economy/clock suites | 3.1 | implemented |
+| §6 living troop identity, HP, cooldowns, replacement production and simultaneous combat | `game.advance`, `game.scenario`, `game.snapshot`, `game.observe`, `game.imps`; exported `ALLY_HP`, `ENEMY_HP`, `CURSOR_MAX_HP`, `ATTACK_COOLDOWN` | `tests/core/survival-combat.test.ts`; legacy economy/clock suites | implemented |
 | §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented |
-| §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | 3.2 | implemented |
-| §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | 3.2 | implemented |
-| §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`, `game.snapshot`; exported `ALLY_AGGRO_RADIUS`; web render/HUD | `tests/core/survival-allies.test.ts`; `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | 3.3 | implemented |
-| §8 faction presentation, health/HUD, restart copy and end-to-end acceptance | web `render`, style and page markup; all exported survival operations | pixel/text browser suites, complete survival loop, final coverage audit | 4.1 | pending |
+| §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | implemented |
+| §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | implemented |
+| §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`, `game.snapshot`; exported `ALLY_AGGRO_RADIUS`; web render/HUD | `tests/core/survival-allies.test.ts`; `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
+| §8 cyan ally and orange enemy `i` glyphs, non-color faction markers and injured health bars | web `render`, `drawTroopMarkers`, colors, style and markup | `tests/browser/survival-complete-loop.spec.ts` | implemented |
+| §8 gate and rally markers, rally coordinates, `i rally Enter` hint, Finder/Insert/Name text overlays | web `render`, `drawRally`, `drawFinder`, HUD and core terminal notice | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
+| §8 cursor HP, nearby troop HP, next-wave countdown, wave, kills and living-population HUD; game-over overlay with restart instructions | web `render`, `drawGameOver`, HUD markup/style; `game.observe`; core `terminal` | `tests/browser/survival-complete-loop.spec.ts`, `tests/browser/survival-death.spec.ts` | implemented |
+| §8 deterministic real-key end-to-end flow in development and production browser projects | all exported survival operations and browser event wiring | `tests/browser/survival-complete-loop.spec.ts`; full `just verify` | implemented |
+| §8 validated scenarios, observations/snapshots and finite property checks | `game.initial`, `game.scenario`, `game.snapshot`, `game.observe`, `game.advance`, `game.dispatch` | core survival suites `survival-profile`, `survival-buildings`, `survival-construction`, `survival-finder`, `survival-terrain`, `survival-combat`, `survival-waves`, `survival-allies` | implemented |
 
 Clock increment, manual pause and hidden suspension run for both profiles and
 are preserved. Survival economy ticks, wave spawning, allied movement, hostile
@@ -55,8 +58,8 @@ the historical shapes; only survival snapshots carry `rules`.
 
 These are the deliberate survival changes. The empty-site boundary, stable
 dynamic building IDs/links, typed construction, names, rally input, the
-building finder, troop combat, waves, hostile movement, collision and cursor
-death and allied rally movement are implemented.
+building finder, troop combat, waves, hostile movement, collision, cursor death,
+allied rally movement and faction presentation are implemented.
 
 | Old first-playable behavior | Survival behavior | Owner |
 | --- | --- | --- |
@@ -169,6 +172,18 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
 
 ## Test and interface revisions
 
+Unit 4.1 adds presentation-only faction colors, faction markers and injured
+health bars in `src/web/main.ts`, HUD elements `#hud-hp`, `#hud-wave`,
+`#hud-kills` and `#hud-pop`, canvas datasets `allies`/`enemies`, and a game-over
+overlay with restart copy. No core rule or public scenario/snapshot field changed.
+`tests/browser/survival-complete-loop.spec.ts` builds and names a well and ring
+at chosen positions, links them with real keys, sets the rally beside the gate,
+advances the manual clock through ally production, movement, a fought wave and
+cursor death, asserts grass/gutter/finder/rally/gate/faction/health/death pixels,
+then restarts with Enter. It runs in both Playwright projects. The authority
+moved to `docs/cursor-survival.md`; historical first-playable suites still select
+`?rules=first-playable`.
+
 Unit 3.3 adds `ALLY_AGGRO_RADIUS = 6` and the shared ally movement phase before
 hostile movement. `tests/core/survival-allies.test.ts` covers the north-first
 tie, arrival and waiting, stable-ID congestion, cursor avoidance, adjacent
@@ -227,8 +242,10 @@ Routing is explicit, not an implicit behavior switch:
   exercise survival.
 
 Survival draws its deterministic terrain clusters, faint grass, the 4-cell
-relative-row gutter, the rally flag and troop glyphs. Browsing supports typed
-Insert construction, autocomplete, names, connections, the shared rally command
-and the building finder through real keys. Waves, hostile movement, collision,
-game over and restart are implemented in the core and browser clock; faction
-colors, the full HP/wave HUD and the final end-to-end loop remain pending.
+relative-row gutter, the rally flag, gate art, cyan ally and orange enemy glyphs,
+non-color faction markers and injured health bars. Browsing supports typed
+Insert construction, autocomplete, names, connections, the shared rally command,
+the building finder, waves, hostile movement, collision, game over and restart
+through real keys. The HUD exposes cursor and nearby HP, wave countdown, kills,
+living allies/enemies, rally coordinates and the restart hint; the final
+real-key loop is checked in both browser projects.

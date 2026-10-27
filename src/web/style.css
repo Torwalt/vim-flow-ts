@@ -61,6 +61,10 @@ body {
 .hud-site { color: #d3dfbc; }
 .hud-mode { color: #b9cd93; }
 .hud-resources { color: #a4b293; }
+.hud-hp { color: #5ad2c4; }
+.hud-wave,
+.hud-kills,
+.hud-pop { color: #a4b293; }
 .hud-cursor { margin-left: auto; color: #99a494; }
 .hud-source,
 .hud-rally,
@@ -78,6 +82,9 @@ body {
 @media (max-width: 720px) {
   #hud { gap: 10px; padding: 0 8px; }
   .hud-resources,
+  .hud-wave,
+  .hud-kills,
+  .hud-pop,
   .hud-rally,
   .hud-draft,
   .hud-notice,
