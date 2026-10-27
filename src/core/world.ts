@@ -12,9 +12,15 @@ export const SITE_IDS = [
 ] as const;
 
 export const RULES_PROFILES = ["first-playable", "survival"] as const;
+export const MAX_BUILDINGS = 32;
+export const GATE_CENTER: Cursor = { x: 200, y: 136 };
+export const GATE_RESERVED = { x: 198, y: 134, width: 5, height: 5 } as const;
+export const DEFAULT_RALLY: Cursor = { x: 13, y: 10 };
 
 export type RulesProfile = (typeof RULES_PROFILES)[number];
 export type SiteId = (typeof SITE_IDS)[number];
+export type DynamicBuildingId = `b${string}`;
+export type BuildingId = SiteId | DynamicBuildingId;
 export type SiteKind = "empty" | "well" | "ring";
 export type ImpSlot = 1 | 2 | 3 | 4 | 5;
 export type MenuSelection = "well" | "ring";
@@ -31,7 +37,7 @@ export interface Cursor {
 export interface Well {
   readonly kind: "well";
   readonly mana: number;
-  readonly link: SiteId | null;
+  readonly link: BuildingId | null;
 }
 
 export interface Ring {
@@ -55,11 +61,27 @@ export type SiteObservation =
   | { readonly kind: "ring"; readonly mana: number; readonly produced: number };
 
 export interface LinkObservation {
-  readonly source: SiteId;
-  readonly target: SiteId;
+  readonly source: BuildingId;
+  readonly target: BuildingId;
   readonly from: Cursor;
   readonly to: Cursor;
 }
+
+export type BuildingObservation =
+  | {
+    readonly id: DynamicBuildingId;
+    readonly kind: "well";
+    readonly center: Cursor;
+    readonly mana: number;
+    readonly link: DynamicBuildingId | null;
+  }
+  | {
+    readonly id: DynamicBuildingId;
+    readonly kind: "ring";
+    readonly center: Cursor;
+    readonly mana: number;
+    readonly produced: number;
+  };
 
 export interface Observation {
   readonly width: number;
@@ -67,10 +89,10 @@ export interface Observation {
   readonly cursor: Cursor;
   readonly mode: string;
   readonly count: number;
-  readonly pendingSource: SiteId | null;
+  readonly pendingSource: BuildingId | null;
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
-  readonly insertSite: SiteId | null;
+  readonly insertSite: BuildingId | null;
   readonly pendingFrom: Cursor | null;
   readonly notice: string;
   readonly commandBuffer: string;
@@ -81,8 +103,10 @@ export interface Observation {
   readonly siteCount: number;
   readonly buildingCount: number;
   readonly impCount: number;
-  readonly siteAtCursor: SiteId | null;
+  readonly siteAtCursor: BuildingId | null;
   readonly sites: Readonly<Partial<Record<SiteId, SiteObservation>>>;
+  readonly buildings: readonly BuildingObservation[];
+  readonly rally: Cursor | null;
   readonly links: readonly LinkObservation[];
   readonly imps: readonly Imp[];
 }
@@ -101,13 +125,23 @@ export interface BuildingSetup {
   readonly produced?: number;
 }
 
+export interface SurvivalBuildingSetup {
+  readonly id: DynamicBuildingId;
+  readonly kind: "well" | "ring";
+  readonly center: Cursor;
+  readonly mana?: number;
+  readonly link?: DynamicBuildingId | null;
+  readonly produced?: number;
+}
+
 export interface Scenario {
   readonly rules?: RulesProfile;
   readonly navigationOnly?: boolean;
   readonly rows?: Readonly<Record<string, string>>;
   readonly cursor?: Cursor;
-  readonly buildings?: readonly BuildingSetup[];
-  readonly pendingSource?: SiteId | null;
+  readonly buildings?: readonly (BuildingSetup | SurvivalBuildingSetup)[];
+  readonly pendingSource?: BuildingId | null;
+  readonly rally?: Cursor;
   readonly manualPaused?: boolean;
   readonly suspended?: boolean;
   readonly elapsedTicks?: number;
@@ -124,9 +158,15 @@ interface SiteDefinition {
   readonly y: number;
 }
 
+interface Placement {
+  readonly id: BuildingId;
+  readonly x: number;
+  readonly y: number;
+}
+
 type LeaderMode = { readonly $: "Leader"; readonly count: 0 };
 type BuildMode = { readonly $: "Build"; readonly count: 0 };
-type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: SiteId };
+type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: BuildingId };
 type GameMode = Mode | LeaderMode | BuildMode | InsertMode;
 
 interface InternalWorld {
@@ -134,11 +174,13 @@ interface InternalWorld {
   readonly navigationOnly: boolean;
   readonly cursor: Cursor;
   readonly mode: GameMode;
-  readonly buildings: ReadonlyMap<SiteId, Building>;
-  readonly pendingSource: SiteId | null;
+  readonly buildings: ReadonlyMap<BuildingId, Building>;
+  readonly dynamic: ReadonlyMap<DynamicBuildingId, Cursor>;
+  readonly rally: Cursor | null;
+  readonly pendingSource: BuildingId | null;
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
-  readonly insertSite: SiteId | null;
+  readonly insertSite: BuildingId | null;
   readonly draft: string;
   readonly notice: string;
   readonly navRows: readonly string[] | null;
@@ -151,7 +193,7 @@ interface InternalWorld {
 export type GameEvent =
   | { readonly type: "key"; readonly key: string; readonly blocked?: boolean }
   | { readonly type: "build"; readonly site: SiteId; readonly kind: "well" | "ring" }
-  | { readonly type: "link"; readonly source: SiteId; readonly target: SiteId }
+  | { readonly type: "link"; readonly source: BuildingId; readonly target: BuildingId }
   | { readonly type: "elapsed"; readonly ms: number }
   | { readonly type: "visibility"; readonly hidden: boolean }
   | { readonly type: "blur" };
@@ -194,7 +236,7 @@ function buildMode(): BuildMode {
   return { $: "Build", count: 0 };
 }
 
-function insertMode(site: SiteId): InsertMode {
+function insertMode(site: BuildingId): InsertMode {
   return { $: "Insert", count: 0, site };
 }
 
@@ -212,6 +254,8 @@ function construct(data: InternalWorld): World {
     cursor: Object.freeze({ ...data.cursor }),
     mode: Object.freeze({ ...data.mode }),
     buildings: new Map(data.buildings),
+    dynamic: new Map(data.dynamic),
+    rally: data.rally === null ? null : Object.freeze({ ...data.rally }),
     navRows: data.navRows === null ? null : Object.freeze([...data.navRows]),
   }));
   return world;
@@ -273,12 +317,72 @@ function siteCenter(site: SiteDefinition): Cursor {
   return { x: site.x + 5, y: site.y + 2 };
 }
 
-function cursor(value: unknown): Cursor {
-  if (!isRecord(value)) fail("cursor must be an object");
+function isDynamicBuildingId(value: unknown): value is DynamicBuildingId {
+  return typeof value === "string" && /^b(00[1-9]|0[12][0-9]|03[0-2])$/.test(value);
+}
+
+function dynamicBuildingId(value: unknown, label: string): DynamicBuildingId {
+  if (!isDynamicBuildingId(value)) fail(`${label} must be a survival building id from b001 to b032`);
+  return value;
+}
+
+function position(value: unknown, label: string): Cursor {
+  if (!isRecord(value)) fail(`${label} must be an object`);
   return {
-    x: integer(value.x, "cursor.x", 0, WORLD_WIDTH - 1),
-    y: integer(value.y, "cursor.y", 0, WORLD_HEIGHT - 1),
+    x: integer(value.x, `${label}.x`, 0, WORLD_WIDTH - 1),
+    y: integer(value.y, `${label}.y`, 0, WORLD_HEIGHT - 1),
   };
+}
+
+function cursor(value: unknown): Cursor {
+  return position(value, "cursor");
+}
+
+interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+function patch(center: Cursor): Rect {
+  return { x: center.x - 5, y: center.y - 2, width: SITE_WIDTH, height: SITE_HEIGHT };
+}
+
+function overlaps(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width
+    && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+function inside(rect: Rect, x: number, y: number): boolean {
+  return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
+}
+
+function insideInterior(center: Cursor): boolean {
+  const rect = patch(center);
+  return rect.x >= 1 && rect.y >= 1
+    && rect.x + rect.width - 1 <= WORLD_WIDTH - 2
+    && rect.y + rect.height - 1 <= WORLD_HEIGHT - 2;
+}
+
+function overlapsGate(center: Cursor): boolean {
+  return overlaps(patch(center), GATE_RESERVED);
+}
+
+function buildingCenter(value: unknown, label: string): Cursor {
+  const center = position(value, label);
+  if (!insideInterior(center)) fail(`${label} footprint must stay inside the interior`);
+  if (overlapsGate(center)) fail(`${label} footprint overlaps the enemy gate`);
+  return center;
+}
+
+function rallyCell(value: unknown, label: string): Cursor {
+  const cell = position(value, label);
+  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
+    fail(`${label} must be an interior cell`);
+  }
+  if (inside(GATE_RESERVED, cell.x, cell.y)) fail(`${label} must stay outside the enemy gate`);
+  return cell;
 }
 
 function sanitizeRow(text: string): string {
@@ -316,11 +420,32 @@ function buildingSetup(value: unknown, index: number): { site: SiteId; building:
   };
 }
 
+function survivalBuildingSetup(value: unknown, index: number): { id: DynamicBuildingId; center: Cursor; building: Building } {
+  if (!isRecord(value)) fail(`buildings[${index}] must be an object`);
+  if (value.site !== undefined) fail(`buildings[${index}] must not name a fixed site`);
+  const id = dynamicBuildingId(value.id, `buildings[${index}].id`);
+  const center = buildingCenter(value.center, `buildings[${index}].center`);
+  if (value.kind !== "well" && value.kind !== "ring") fail(`buildings[${index}].kind must be well or ring`);
+  const mana = integer(value.mana ?? 0, `buildings[${index}].mana`, 0, value.kind === "well" ? WELL_MANA_CAP : RING_MANA_CAP);
+  if (value.kind === "well") {
+    if (value.produced !== undefined) fail(`buildings[${index}] is a well and cannot have produced`);
+    const link = value.link ?? null;
+    if (link !== null && !isDynamicBuildingId(link)) fail(`buildings[${index}].link must name a survival building`);
+    return { id, center, building: { kind: "well", mana, link } };
+  }
+  if (value.link !== undefined && value.link !== null) fail(`buildings[${index}] is a ring and cannot have a link`);
+  return {
+    id,
+    center,
+    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, IMP_CAP) },
+  };
+}
+
 function parseScenario(spec: unknown): InternalWorld {
   if (spec === undefined) spec = {};
   if (!isRecord(spec)) fail("scenario must be an object");
   const allowed = new Set([
-    "rules", "navigationOnly", "rows", "cursor", "buildings", "pendingSource",
+    "rules", "navigationOnly", "rows", "cursor", "buildings", "pendingSource", "rally",
     "manualPaused", "suspended", "elapsedTicks", "remainderMs",
   ]);
   for (const key of Object.keys(spec)) if (!allowed.has(key)) fail(`unknown scenario field ${key}`);
@@ -328,21 +453,30 @@ function parseScenario(spec: unknown): InternalWorld {
   if (spec.navigationOnly !== undefined && typeof spec.navigationOnly !== "boolean") fail("navigationOnly must be boolean");
   const navigationOnly = spec.navigationOnly === true;
   if (!navigationOnly && spec.rows !== undefined) fail("rows require navigationOnly");
-  if (rules === "survival" && spec.pendingSource !== undefined && spec.pendingSource !== null) {
-    fail("survival scenarios have no fixed sites");
-  }
+  if (rules !== "survival" && spec.rally !== undefined) fail("rally is only available in survival");
   const navRows = navigationOnly && spec.rows !== undefined ? rows(spec.rows) : navigationOnly ? Array.from({ length: WORLD_HEIGHT }, () => " ".repeat(WORLD_WIDTH)) : null;
   const position = spec.cursor === undefined ? { ...INITIAL_CURSOR } : cursor(spec.cursor);
-  const buildings = new Map<SiteId, Building>();
+  const buildings = new Map<BuildingId, Building>();
+  const dynamic = new Map<DynamicBuildingId, Cursor>();
   if (spec.buildings !== undefined) {
     if (!Array.isArray(spec.buildings)) fail("buildings must be an array");
     for (const [index, value] of spec.buildings.entries()) {
-      const parsed = buildingSetup(value, index);
-      if (buildings.has(parsed.site)) fail(`duplicate building site ${parsed.site}`);
-      buildings.set(parsed.site, parsed.building);
+      if (rules === "survival") {
+        const parsed = survivalBuildingSetup(value, index);
+        if (buildings.has(parsed.id)) fail(`duplicate building id ${parsed.id}`);
+        for (const [other, center] of dynamic) {
+          if (overlaps(patch(parsed.center), patch(center))) fail(`buildings[${index}] overlaps ${other}`);
+        }
+        if (dynamic.size >= MAX_BUILDINGS) fail(`buildings may not exceed ${MAX_BUILDINGS}`);
+        buildings.set(parsed.id, parsed.building);
+        dynamic.set(parsed.id, parsed.center);
+      } else {
+        const parsed = buildingSetup(value, index);
+        if (buildings.has(parsed.site)) fail(`duplicate building site ${parsed.site}`);
+        buildings.set(parsed.site, parsed.building);
+      }
     }
   }
-  if (rules === "survival" && buildings.size > 0) fail("survival scenarios have no fixed sites or buildings");
   if (navigationOnly && buildings.size > 0) fail("navigationOnly has no sites or buildings");
   for (const [site, building] of buildings) {
     if (building.kind === "well" && building.link !== null) {
@@ -352,11 +486,16 @@ function parseScenario(spec: unknown): InternalWorld {
   }
   const pendingSource = spec.pendingSource === undefined || spec.pendingSource === null
     ? null
-    : siteId(spec.pendingSource, "pendingSource");
+    : rules === "survival"
+      ? dynamicBuildingId(spec.pendingSource, "pendingSource")
+      : siteId(spec.pendingSource, "pendingSource");
   if (pendingSource !== null) {
     const source = buildings.get(pendingSource);
     if (!source || source.kind !== "well") fail(`pendingSource ${pendingSource} must name a built well`);
   }
+  const rally = rules === "survival"
+    ? spec.rally === undefined ? { ...DEFAULT_RALLY } : rallyCell(spec.rally, "rally")
+    : null;
   const manualPaused = spec.manualPaused === undefined ? false : boolean(spec.manualPaused, "manualPaused");
   const suspended = spec.suspended === undefined ? false : boolean(spec.suspended, "suspended");
   const elapsedTicks = spec.elapsedTicks === undefined ? 0 : safeInteger(spec.elapsedTicks, "elapsedTicks");
@@ -367,6 +506,8 @@ function parseScenario(spec: unknown): InternalWorld {
     cursor: position,
     mode: normalMode(),
     buildings,
+    dynamic,
+    rally,
     pendingSource,
     menuSelection: null,
     buildTarget: null,
@@ -406,7 +547,7 @@ function baseCells(): string[] {
 
 const BASE = baseCells();
 
-function drawBuilding(cells: string[], site: SiteDefinition, building: Building | undefined): void {
+function drawBuilding(cells: string[], site: Placement, building: Building | undefined): void {
   for (let y = 0; y < SITE_HEIGHT; y++) {
     for (let x = 0; x < SITE_WIDTH; x++) cells[(site.y + y) * WORLD_WIDTH + site.x + x] = " ";
   }
@@ -426,6 +567,12 @@ function drawBuilding(cells: string[], site: SiteDefinition, building: Building 
   }
 }
 
+function drawGate(cells: string[]): void {
+  put(cells, GATE_CENTER.x - 1, GATE_CENTER.y - 1, "/O\\");
+  put(cells, GATE_CENTER.x - 1, GATE_CENTER.y, "|O|");
+  put(cells, GATE_CENTER.x - 1, GATE_CENTER.y + 1, "\\O/");
+}
+
 function compose(world: InternalWorld): string {
   if (world.navRows !== null) return world.navRows.join("");
   const cells = BASE.slice();
@@ -437,6 +584,11 @@ function compose(world: InternalWorld): string {
       for (const slot of IMP_SLOTS.slice(0, building.produced)) {
         put(cells, site.x + RALLY_OFFSET[slot], site.y + RALLY_ROW, "i");
       }
+    }
+  } else {
+    drawGate(cells);
+    for (const [id, center] of world.dynamic) {
+      drawBuilding(cells, { id, x: center.x - 5, y: center.y - 2 }, world.buildings.get(id));
     }
   }
   return cells.join("");
@@ -489,12 +641,31 @@ export function snapshot(world: World): Scenario {
       ...clockSetup(state),
     };
   }
+  if (state.rules === "survival") {
+    const buildings: SurvivalBuildingSetup[] = [];
+    for (const id of [...state.dynamic.keys()].sort()) {
+      const building = state.buildings.get(id);
+      const center = state.dynamic.get(id);
+      if (!building || !center) continue;
+      buildings.push(building.kind === "well"
+        ? { id, kind: "well", center: { ...center }, mana: building.mana, link: isDynamicBuildingId(building.link) ? building.link : null }
+        : { id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced });
+    }
+    return {
+      ...profile,
+      cursor: { ...state.cursor },
+      buildings,
+      ...(state.pendingSource === null ? {} : { pendingSource: state.pendingSource }),
+      rally: { ...(state.rally ?? DEFAULT_RALLY) },
+      ...clockSetup(state),
+    };
+  }
   const buildings: BuildingSetup[] = [];
   for (const site of SITE_DEFINITIONS) {
     const building = state.buildings.get(site.id);
     if (!building) continue;
     buildings.push(building.kind === "well"
-      ? { site: site.id, kind: "well", mana: building.mana, link: building.link }
+      ? { site: site.id, kind: "well", mana: building.mana, link: isSiteId(building.link) ? building.link : null }
       : { site: site.id, kind: "ring", mana: building.mana, produced: building.produced });
   }
   return {
@@ -526,9 +697,49 @@ export function build(world: World, site: SiteId, kind: "well" | "ring"): World 
   return construct({ ...state, buildings });
 }
 
-export function link(world: World, source: SiteId, target: SiteId): World {
+export function place(world: World, center: Cursor, kind: "well" | "ring"): World {
   const state = data(world);
-  if (!isSiteId(source) || !isSiteId(target) || state.rules !== "first-playable" || state.navigationOnly) return world;
+  if (state.rules !== "survival" || state.navigationOnly) return world;
+  if (kind !== "well" && kind !== "ring") return world;
+  if (!isRecord(center)) return world;
+  const cell = { x: center.x, y: center.y };
+  if (!Number.isInteger(cell.x) || !Number.isInteger(cell.y)) return world;
+  if (!insideInterior(cell) || overlapsGate(cell)) return world;
+  if (state.dynamic.size >= MAX_BUILDINGS) return world;
+  for (const other of state.dynamic.values()) {
+    if (overlaps(patch(cell), patch(other))) return world;
+  }
+  const area = patch(cell);
+  for (const imp of impsOf(state)) {
+    if (inside(area, imp.x, imp.y)) return world;
+  }
+  let id: DynamicBuildingId | null = null;
+  for (let index = 1; index <= MAX_BUILDINGS; index++) {
+    const candidate = `b${String(index).padStart(3, "0")}` as DynamicBuildingId;
+    if (!state.buildings.has(candidate)) {
+      id = candidate;
+      break;
+    }
+  }
+  if (id === null) return world;
+  const buildings = new Map(state.buildings);
+  buildings.set(id, kind === "well"
+    ? { kind: "well", mana: 0, link: null }
+    : { kind: "ring", mana: 0, produced: 0 });
+  const dynamic = new Map(state.dynamic);
+  dynamic.set(id, { ...cell });
+  return construct({ ...state, buildings, dynamic });
+}
+
+export function link(world: World, source: BuildingId, target: BuildingId): World {
+  const state = data(world);
+  if (state.navigationOnly) return world;
+  const dynamic = state.rules === "survival";
+  if (dynamic) {
+    if (!isDynamicBuildingId(source) || !isDynamicBuildingId(target)) return world;
+  } else if (!isSiteId(source) || !isSiteId(target)) {
+    return world;
+  }
   const well = state.buildings.get(source);
   const ring = state.buildings.get(target);
   if (!well || well.kind !== "well" || !ring || ring.kind !== "ring") return world;
@@ -538,7 +749,7 @@ export function link(world: World, source: SiteId, target: SiteId): World {
   return construct({ ...state, buildings });
 }
 
-function generate(buildings: Map<SiteId, Building>): void {
+function generate(buildings: Map<BuildingId, Building>): void {
   for (const site of SITE_DEFINITIONS) {
     const building = buildings.get(site.id);
     if (building?.kind !== "well") continue;
@@ -546,7 +757,7 @@ function generate(buildings: Map<SiteId, Building>): void {
   }
 }
 
-function transfer(buildings: Map<SiteId, Building>): void {
+function transfer(buildings: Map<BuildingId, Building>): void {
   for (const site of SITE_DEFINITIONS) {
     const well = buildings.get(site.id);
     if (well?.kind !== "well" || well.link === null) continue;
@@ -560,7 +771,7 @@ function transfer(buildings: Map<SiteId, Building>): void {
   }
 }
 
-function summon(buildings: Map<SiteId, Building>): void {
+function summon(buildings: Map<BuildingId, Building>): void {
   for (const site of SITE_DEFINITIONS) {
     const ring = buildings.get(site.id);
     if (ring?.kind !== "ring") continue;
@@ -569,7 +780,7 @@ function summon(buildings: Map<SiteId, Building>): void {
   }
 }
 
-function tick(buildings: Map<SiteId, Building>): void {
+function tick(buildings: Map<BuildingId, Building>): void {
   generate(buildings);
   transfer(buildings);
   summon(buildings);
@@ -610,7 +821,7 @@ function leaderStep(world: World, state: InternalWorld, key: string): World {
     });
   }
   const target = siteAt(world, state.cursor.x, state.cursor.y);
-  if (target === null) {
+  if (target === null || !isSiteId(target)) {
     return construct({
       ...state,
       mode: normalMode(),
@@ -856,6 +1067,7 @@ export function dispatch(world: World, event: GameEvent): World {
 export function observe(world: World): Observation {
   const state = data(world);
   const sites: Partial<Record<SiteId, SiteObservation>> = {};
+  const buildings: BuildingObservation[] = [];
   const links: LinkObservation[] = [];
   let buildingCount = 0;
   let impCount = 0;
@@ -868,12 +1080,13 @@ export function observe(world: World): Observation {
       } else {
         buildingCount++;
         if (building.kind === "well") {
-          sites[site.id] = { kind: "well", mana: building.mana, link: building.link };
-          if (building.link !== null) {
-            const target = siteDefinition(building.link);
+          const link = isSiteId(building.link) ? building.link : null;
+          sites[site.id] = { kind: "well", mana: building.mana, link };
+          if (link !== null) {
+            const target = siteDefinition(link);
             if (target) links.push({
               source: site.id,
-              target: building.link,
+              target: link,
               from: siteCenter(site),
               to: siteCenter(target),
             });
@@ -883,6 +1096,24 @@ export function observe(world: World): Observation {
           impCount += building.produced;
           sites[site.id] = { kind: "ring", mana: building.mana, produced: building.produced };
         }
+      }
+    }
+  } else if (!state.navigationOnly && state.rules === "survival") {
+    buildingCount = state.dynamic.size;
+    for (const id of [...state.dynamic.keys()].sort()) {
+      const building = state.buildings.get(id);
+      const center = state.dynamic.get(id);
+      if (!building || !center) continue;
+      if (building.kind === "well") {
+        const link = isDynamicBuildingId(building.link) ? building.link : null;
+        buildings.push({ id, kind: "well", center: { ...center }, mana: building.mana, link });
+        if (link !== null) {
+          const target = state.dynamic.get(link);
+          if (target) links.push({ source: id, target: link, from: { ...center }, to: { ...target } });
+        }
+        if (state.pendingSource === id) pendingFrom = { ...center };
+      } else {
+        buildings.push({ id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced });
       }
     }
   }
@@ -908,14 +1139,23 @@ export function observe(world: World): Observation {
     impCount,
     siteAtCursor: siteAt(world, state.cursor.x, state.cursor.y),
     sites,
+    buildings,
+    rally: state.rally === null ? null : { ...state.rally },
     links,
     imps: impsOf(state),
   };
 }
 
-export function siteAt(world: World, x: number, y: number): SiteId | null {
+export function siteAt(world: World, x: number, y: number): BuildingId | null {
   const state = data(world);
-  if (state.rules !== "first-playable" || state.navigationOnly || !Number.isInteger(x) || !Number.isInteger(y)) return null;
+  if (state.navigationOnly || !Number.isInteger(x) || !Number.isInteger(y)) return null;
+  if (state.rules === "survival") {
+    for (const [id, center] of state.dynamic) {
+      if (inside(patch(center), x, y)) return id;
+    }
+    return null;
+  }
+  if (state.rules !== "first-playable") return null;
   for (const site of SITE_DEFINITIONS) {
     if (x >= site.x && x < site.x + SITE_WIDTH && y >= site.y && y < site.y + SITE_HEIGHT) return site.id;
   }

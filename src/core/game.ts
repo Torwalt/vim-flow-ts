@@ -1,9 +1,12 @@
-import { advance, build, dispatch, field, glyphAt, imps, initial, link, observe, preview, scenario, siteAt, snapshot } from "./world";
+import { advance, build, dispatch, field, glyphAt, imps, initial, link, observe, place, preview, scenario, siteAt, snapshot } from "./world";
 
 export type {
   Building,
+  BuildingId,
+  BuildingObservation,
   BuildingSetup,
   Cursor,
+  DynamicBuildingId,
   GameEvent,
   GlyphField,
   Imp,
@@ -18,11 +21,16 @@ export type {
   SiteId,
   SiteKind,
   SiteObservation,
+  SurvivalBuildingSetup,
   Well,
   World,
 } from "./world";
 export {
+  DEFAULT_RALLY,
+  GATE_CENTER,
+  GATE_RESERVED,
   IMP_CAP,
+  MAX_BUILDINGS,
   RING_MANA_CAP,
   RULES_PROFILES,
   SITE_HEIGHT,
@@ -43,6 +51,7 @@ export const game = {
   observe,
   dispatch,
   build,
+  place,
   link,
   advance,
   preview,

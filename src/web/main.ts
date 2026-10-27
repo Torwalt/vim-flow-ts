@@ -7,6 +7,7 @@ import {
   type GameEvent,
   type Observation,
   type RulesProfile,
+  type SiteId,
   type World,
 } from "../core/game";
 import {
@@ -95,7 +96,20 @@ function describeSite(observation: Observation): { label: string; resources: str
   }
   const id = observation.siteAtCursor;
   if (id === null) return { label: "no site", resources: "" };
-  const site = observation.sites[id];
+  const building = observation.buildings.find(candidate => candidate.id === id);
+  if (building) {
+    if (building.kind === "well") {
+      return {
+        label: `${id} WELL`,
+        resources: `mana ${building.mana}q · out ${building.link ?? "—"}`,
+      };
+    }
+    return {
+      label: `${id} RING`,
+      resources: `mana ${building.mana}q · ${building.produced}/5 · in ${incoming(observation, id)}`,
+    };
+  }
+  const site = id in observation.sites ? observation.sites[id as SiteId] : undefined;
   if (!site) return { label: `${id} empty`, resources: "" };
   if (site.kind === "empty") return { label: `${id} EMPTY`, resources: "" };
   if (site.kind === "well") {
@@ -114,6 +128,9 @@ function incoming(observation: Observation, ring: string): string {
   const sources: string[] = [];
   for (const [id, site] of Object.entries(observation.sites)) {
     if (site?.kind === "well" && site.link === ring) sources.push(id);
+  }
+  for (const building of observation.buildings) {
+    if (building.kind === "well" && building.link === ring) sources.push(building.id);
   }
   return sources.length === 0 ? "—" : sources.sort().join(",");
 }
