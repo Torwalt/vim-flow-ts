@@ -199,6 +199,31 @@
         "reasoning": 25721,
         "cache_read": 4372096
       }
+    },
+    "4.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:57:28+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "8b5d5a8e4b1db2cb053be6be35f707a01bf914c1",
+      "commits": [
+        "2fd3045e529cb23c766214242ae2addb287e5eb7 Render survival factions, health and status"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `2fd3045` completes survival presentation and the design loop. Survival troops now render as cyan allies and orange enemies with distinct non-color markers (ally underline, enemy pip), damaged troops get health bars, and the HUD exposes cursor/nearby HP, wave and next-wave countdown, kills, and living allies/enemies. A game-over panel shows the restart key, and the browser datasets add `allies`/`enemies`. A deterministic real-key browser flow builds and names both buildings at chosen positions, links them, sets the rally beside the gate, produces and moves allies, fights a wave without dying, then dies and restarts; it runs in development and production. The authority moved to `docs/cursor-survival.md`, the coverage map has no pending rows, and the resolved workbench topic was removed with `benchpress rm`.\n\n**Landmark drift** — `src/web/main.ts` retains `render` and gains `drawTroopMarkers`, `drawGameOver`, `nearbyHealth` and `waveLabel`. HUD markup gained `#hud-hp`, `#hud-wave`, `#hud-kills` and `#hud-pop`. The old authority path `docs/plans/CURSOR_SURVIVAL.md` is now `docs/cursor-survival.md`; execution front matter/context, AGENTS, README, direction and coverage point there. `docs/workbench/NEXT.md` was already empty and is unchanged.\n\n**Deviations from the work order** — presentation is survival-only; first-playable rendering is unchanged. The new end-to-end suite is `tests/browser/survival-complete-loop.spec.ts` rather than a rewrite of the historical `complete-loop.spec.ts`, so the frozen first-playable loop stays intact. Exact tick checkpoints in the new flow (50, 5, 495, 100, 200) are deterministic consequences of the current tuning, not new constants.\n\n**What the next session must know** — `just verify` passed after the commit: 289 core tests, 106 browser tests, fixture/contract/typecheck/benchpress checks. Colors live in the `colors` object in `src/web/main.ts`: ally `#5ad2c4`, enemy `#e47a52`, health background `#313b34`, overlay panel `#2a1716`. Grass and gate glyphs are antialiased, so pixel tests use tolerance for them; faction fill rects and health bars are exact. The complete-loop test deliberately moves the cursor off the rally cell before asserting the rally marker, because the gold cursor block otherwise covers the flag. The authority file body was left substantively unchanged; only its title/status line and path moved.\n\n**Open problems** — Authority §4 still says a rally commit must reject a cell occupied by an enemy, but `rallyProblem` only checks interior and the gate reservation. That gap predates this unit and is untouched. The execution plan and its `.state.json` were deliberately not edited; Ploopy closes them.",
+      "session_id": "ses_e82ced3e8ffeyqYQLtPWc54tB4",
+      "cost_usd": 0.10277219400000001,
+      "harness": "opencode",
+      "elapsed_s": 512,
+      "session_s": 495,
+      "verify_s": 16,
+      "test_s": 1,
+      "tokens": {
+        "input": 320655,
+        "output": 23035,
+        "reasoning": 27326,
+        "cache_read": 8152448
+      }
     }
   }
 }
