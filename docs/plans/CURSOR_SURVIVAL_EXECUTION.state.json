@@ -49,6 +49,31 @@
         "reasoning": 28490,
         "cache_read": 4199680
       }
+    },
+    "2.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:04:47+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "ae33c1f98408fcdddb0250b5ed457d492570719b",
+      "commits": [
+        "2fae371bbfe501a0dda1191d61aedbf0c6b2ed2b Add survival terrain, grass and relative row gutter"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `2fae371` adds survival terrain and the relative row\ngutter. `compose` now draws the deterministic 3x2 clusters at `(8+24c,8+16r)` on\nblank survival ground, skipping the gate reservation; the lake/tree base wins by\nconstruction and buildings still clear only their own footprint. The browser\nrenders faint `.` grass, a dark-green ground tint, green trees, gray rocks, blue\nwater, and a 4-cell (48px) left gutter showing the absolute 1-based row at the\ncursor and absolute row distance elsewhere, with the current row highlighted.\n`visibleCells` takes an optional gutter width (default 0) and `gutterLabel` is\nexported. Core and browser tests cover clusters, gate skip, building clearance,\nword/find anchors, legacy isolation, gutter labels/camera alignment, resize and\ntiny viewports. Coverage, AGENTS and direction reflect the new state.\n\n**Landmark drift** — no renamed landmarks. `baseCells`/`compose` are in\n`src/core/world.ts`; the cluster helper sits beside `BASE` and runs only in the\nsurvival branch. Camera helpers remain in `src/web/camera.ts`; render and HUD\nwiring remain in `src/web/main.ts`.\n\n**Deviations from the work order** — clusters are survival-only, so legacy\nterrain, pixel and camera tests are untouched. Grass is presentation-only in\n`src/web/main.ts`; `game.field` keeps blank cells as literal spaces. The gutter\nis survival-only and implemented as an optional `visibleCells` inset plus a\nseparate `gutterLabel`, preserving the historical two-argument calls. A small\nblank `#hud-legend` span was added and survival fills it with\n`grass . is whitespace`. Terrain colors distinguish building art by checking\ndynamic building footprints, because well art contains `~` and ring art contains\n`o`. The unit 1.1 assertion that survival `(8,8)` is blank was revised to `^`\nand recorded in coverage.\n\n**What the next session must know** — `?rules=survival` is still opt-in; default\nbrowser play remains first-playable until 2.3. `game.field` survival now contains\n`^`/`o` landmarks, so tests expecting blank interior cells there must account\nfor them. `canvas.dataset.gutterWidth` and `canvas.dataset.gutter` are test hooks;\ngutter labels are comma-separated visible rows. Only cluster `(c=8,r=8)` is\nskipped for the gate reservation. Legacy `space f`/Build and `i connect` paths\nstill exist and are not survival construction; 2.2 replaces them. Colors are\nprivate in `main.ts`, so browser assertions hardcode RGB (existing convention).\nTiny viewports clamp to one world cell with the 48px gutter partly clipped.\n\n**Open problems** — none blocking. Terrain-color browser assertions use a small\nper-channel tolerance because glyph edges are antialiased; solid fills use exact\nRGB. The project still has no survival construction UI, finder, troops or waves.\n`direnv exec . just verify` and `direnv exec . just test` pass at HEAD.",
+      "session_id": "ses_e82ffbbf1ffeIi11fBenEz0zMh",
+      "cost_usd": 0.080510394,
+      "harness": "opencode",
+      "elapsed_s": 557,
+      "session_s": 542,
+      "verify_s": 14,
+      "test_s": 1,
+      "tokens": {
+        "input": 260459,
+        "output": 17849,
+        "reasoning": 24666,
+        "cache_read": 5310848
+      }
     }
   }
 }
