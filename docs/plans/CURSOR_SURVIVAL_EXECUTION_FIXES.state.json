@@ -49,6 +49,31 @@
         "reasoning": 3108,
         "cache_read": 1300608
       }
+    },
+    "1.3": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:43:22+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "1caa9504f217a565248b77ca408ec4a0a7a20b11",
+      "commits": [
+        "6b980ab7f07b65fb3ffd0bb3e52ec2a19775919f Keep navigation-only worlds out of survival simulation"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.3 — Keep navigation-only worlds free of survival simulation\n\n**What landed**\n\n`6b980ab Keep navigation-only worlds out of survival simulation` makes\n`tickWorld` return after incrementing `elapsedTicks` whenever `navigationOnly`\nis set. Economy, wave spawning, troop movement and combat no longer run for\nnavigation-only worlds of either rules profile, while `advance` still owns\nremainder arithmetic, pause and hidden suspension.\n\n`tests/core/survival-profile.test.ts` advances a navigation-only survival world\nby 105000 ms in one call and through `[1, 99, 100, 300, 600, 500, 900, 12500,\n20000, 70000]`, crossing four wave boundaries. It asserts equal observations and\nsnapshots across partitions, zero troops/wave/next-wave, preserved custom rows\nand `w` motion, snapshot round-trip plus future advancement, exact 250 ms clock\narithmetic, paused/hidden clocks, and an ordinary survival wave-1 control.\n`docs/survival-coverage.md` records the revision; no public interface changed.\n\n**Landmark drift**\n\nThe work order's `tickWorld` at `src/core/world.ts:1456` is now at 1468; the\nbody is otherwise the same. The new guard is at 1470. `parseScenario`,\n`compose`, `snapshot` and `observe` landmarks moved with earlier unit changes\nbut retain their navigation-only branches and were not edited.\n\n**Deviations from the work order**\n\nThe guard skips all tick simulation for every navigation-only profile, not only\nsurvival. This matches the unit's navigation-only contract, is unobservable for\nthe historical profile (its snapshot and observations already omit buildings),\nand avoids hidden legacy economy inside a navigation fixture. No test was\ndeleted or weakened.\n\n**What the next session must know**\n\n- `advance` still handles remainder partitions, tick overflow, pause and\n  suspension before `tickWorld`; the guard only suppresses simulation phases.\n- Navigation-only observations already hard-code `wave: 0` and\n  `nextWaveTick: 0`; the fix also guarantees `troops` is genuinely empty.\n- `direnv exec . just test` passed 295 core tests. `direnv exec . just verify`\n  passed both browser projects (106 tests), typecheck, contract checks,\n  first-playable completion and benchpress lint. No flake change, so\n  `just check-nix` was not run.\n- The worktree is clean after the commit.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e829f2bc8ffe9NVNKjHitBbf3T",
+      "cost_usd": 0.020536061999999997,
+      "harness": "opencode",
+      "elapsed_s": 143,
+      "session_s": 124,
+      "verify_s": 17,
+      "test_s": 2,
+      "tokens": {
+        "input": 54281,
+        "output": 5092,
+        "reasoning": 6401,
+        "cache_read": 1832704
+      }
     }
   }
 }
