@@ -33,6 +33,7 @@ export type {
   World,
 } from "./world";
 export {
+  ALLY_AGGRO_RADIUS,
   ALLY_HP,
   ATTACK_COOLDOWN,
   CURSOR_MAX_HP,

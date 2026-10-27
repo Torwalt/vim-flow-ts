@@ -13,8 +13,8 @@ typed survival construction, names, connections and the shared rally command,
 unit 2.3 added the building finder and made survival the browser default,
 unit 3.1 added living troop state, replacement production, cursor HP and kills,
 and simultaneous combat, and unit 3.2 added fixed-gate enemy waves, deterministic
-hostile chasing, cursor collision, game over and restart; allied movement
-remains pending.
+hostile chasing, cursor collision, game over and restart, and unit 3.3 added
+shared-rally allied movement, six-cell enemy pursuit and rally resumption.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as

@@ -4,9 +4,9 @@ Authority: [Cursor survival](plans/CURSOR_SURVIVAL.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
 placement, the fixed gate, deterministic terrain, the relative row gutter,
 typed construction, names, connections, the shared rally command, the building
-finder, living troop combat, fixed-gate waves, hostile chasing, cursor collision
-and game over. Clauses owned by later units are marked pending; they are not
-claimed as implemented.
+finder, living troop combat, fixed-gate waves, hostile chasing, cursor collision,
+game over and allied rally movement. Clauses owned by later units are marked
+pending; they are not claimed as implemented.
 
 Status values: **implemented**, **preserved** (historical behavior kept), and
 **pending** (named execution unit owns it).
@@ -35,13 +35,12 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 | §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented |
 | §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | 3.2 | implemented |
 | §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | 3.2 | implemented |
-| §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`; web render/HUD | core movement and browser tests | 3.3 | pending |
+| §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`, `game.snapshot`; exported `ALLY_AGGRO_RADIUS`; web render/HUD | `tests/core/survival-allies.test.ts`; `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | 3.3 | implemented |
 | §8 faction presentation, health/HUD, restart copy and end-to-end acceptance | web `render`, style and page markup; all exported survival operations | pixel/text browser suites, complete survival loop, final coverage audit | 4.1 | pending |
 
 Clock increment, manual pause and hidden suspension run for both profiles and
-are preserved. Survival economy ticks, wave spawning, hostile movement, combat
-damage and cursor death run in §7 order; allied movement remains pending with
-§7.
+are preserved. Survival economy ticks, wave spawning, allied movement, hostile
+movement, combat damage and cursor death run in §7 order.
 
 ## Preserved historical obligations
 
@@ -57,7 +56,7 @@ the historical shapes; only survival snapshots carry `rules`.
 These are the deliberate survival changes. The empty-site boundary, stable
 dynamic building IDs/links, typed construction, names, rally input, the
 building finder, troop combat, waves, hostile movement, collision and cursor
-death are implemented; allied movement remains pending with unit 3.3.
+death and allied rally movement are implemented.
 
 | Old first-playable behavior | Survival behavior | Owner |
 | --- | --- | --- |
@@ -65,6 +64,7 @@ death are implemented; allied movement remains pending with unit 3.3.
 | Space `f` Build menu | Typed Insert construction with autocomplete, names and a typed rally command | 2.2 (implemented) |
 | Fixed `SiteId` links | Dynamic stable building IDs with validated links | 1.2, 2.2 |
 | Stationary slot imps | Living allies with stable IDs, HP and replacement production | 3.1 (implemented) |
+| Stationary survival allies | Allies march to the latest rally, pursue enemies within six path cells and resume the rally after combat | 3.3 (implemented) |
 | Five-imps-per-ring total cap | Five living allies per origin ring; death frees a slot and replacements get fresh serials | 3.1 (implemented) |
 | No combat | Adjacent allies and enemies attack simultaneously with HP and cooldowns; enemies also damage the cursor | 3.1 (implemented) |
 | Immortal cursor | Cursor HP damaged in combat and on blocked collision; HP zero freezes play until Enter restarts | 3.1 (HP), 3.2 (collision/death) |
@@ -73,7 +73,7 @@ death are implemented; allied movement remains pending with unit 3.3.
 
 ## Survival interface additions
 
-Units 1.2 through 3.2 add these public interfaces without changing the historical ones:
+Units 1.2 through 3.3 add these public interfaces without changing the historical ones:
 
 - `game.place(world, center, kind)` places a survival well or ring with an
   `11x7` footprint centred on `(center.x, center.y)`. It returns the input world
@@ -152,13 +152,31 @@ Units 1.2 through 3.2 add these public interfaces without changing the historica
   `nextAttackTick` to `elapsedTicks + 10`; later inputs in the same tick only
   block. Cursor HP zero clears choices, drafts and source, drops the clock
   remainder and freezes further input or elapsed time. An unblocked Enter starts
-  a fresh survival world. Allied movement remains pending.
+  a fresh survival world.
+- On every fifth tick, allies move before enemies over at most three shared BFS
+  fields: the rally, the cursor and all enemies. An ally uses the enemy field
+  when its nearest enemy is at most `ALLY_AGGRO_RADIUS` path cells away and the
+  rally field otherwise. It takes the first unoccupied cardinal neighbour with
+  a strictly smaller distance in north/east/south/west order, holds at distance
+  zero or beside an opponent, and never enters the cursor cell. Earlier ally
+  moves count as occupancy for later allies and for enemies, so a packed group
+  waits around the rally instead of routing around it. Newborn allies obey the
+  current rally on their first movement phase.
 - `src/web/camera.ts` exports `GUTTER_COLUMNS = 4`, `GUTTER_WIDTH = 48`, an
   optional gutter parameter on `visibleCells`, and `gutterLabel`. Survival
   subtracts the gutter before viewport/camera math; the historical
   two-argument call and the first-playable render remain unchanged.
 
 ## Test and interface revisions
+
+Unit 3.3 adds `ALLY_AGGRO_RADIUS = 6` and the shared ally movement phase before
+hostile movement. `tests/core/survival-allies.test.ts` covers the north-first
+tie, arrival and waiting, stable-ID congestion, cursor avoidance, adjacent
+combat hold, rally retargeting, newborn rally use, the six-cell aggro boundary
+and return to rally, partition invariance, origin-ring living caps after
+departure, a real gate rally/fight scenario, occupied gate slots without a
+hidden backlog and the finder's current rally destination. Existing wave,
+combat and snapshot shapes are unchanged by allied movement.
 
 Unit 3.2 adds `gameOver`, `wave` and `nextWaveTick` observations, the
 `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL` and `WAVE_MAX_SIZE` exports,
@@ -213,5 +231,4 @@ relative-row gutter, the rally flag and troop glyphs. Browsing supports typed
 Insert construction, autocomplete, names, connections, the shared rally command
 and the building finder through real keys. Waves, hostile movement, collision,
 game over and restart are implemented in the core and browser clock; faction
-colors, the full HP/wave HUD, allied movement and the final end-to-end loop
-remain pending.
+colors, the full HP/wave HUD and the final end-to-end loop remain pending.

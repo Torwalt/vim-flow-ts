@@ -335,6 +335,7 @@ export const CURSOR_MAX_HP = 10;
 export const ALLY_HP = 4;
 export const ENEMY_HP = 3;
 export const ATTACK_COOLDOWN = 10;
+export const ALLY_AGGRO_RADIUS = 6;
 export const ENEMY_CAP = 128;
 export const WAVE_START_TICK = 300;
 export const WAVE_INTERVAL = 200;
@@ -1302,6 +1303,45 @@ function distanceField(sources: readonly Cursor[]): Int32Array {
   return distances;
 }
 
+function moveAllies(state: InternalWorld, troops: readonly Troop[]): readonly Troop[] {
+  if (!troops.some(troop => troop.faction === "ally")) return troops;
+  const enemies = troops.filter(troop => troop.faction === "enemy");
+  const rally = state.rally ?? DEFAULT_RALLY;
+  const rallyDistances = distanceField([rally]);
+  const enemyDistances = enemies.length === 0 ? null : distanceField(enemies);
+  const occupied = new Set(troops.map(cellKey));
+  occupied.add(cellKey(state.cursor));
+  const moved = [...troops];
+  for (const ordered of troops.filter(troop => troop.faction === "ally").sort(compareTroopIds)) {
+    const index = moved.findIndex(troop => troop.id === ordered.id);
+    const ally = moved[index];
+    if (!ally || ally.faction !== "ally") continue;
+    if (moved.some(troop => troop.faction === "enemy" && adjacent(troop, ally))) continue;
+    const enemyDistance = enemyDistances === null ? -1 : distanceAt(enemyDistances, ally);
+    const distances = enemyDistances !== null && enemyDistance >= 0 && enemyDistance <= ALLY_AGGRO_RADIUS
+      ? enemyDistances
+      : rallyDistances;
+    const currentDistance = distanceAt(distances, ally);
+    if (currentDistance <= 0) continue;
+    const here = cellKey(ally);
+    for (const offset of MOVE_OFFSETS) {
+      const x = ally.x + offset.x;
+      const y = ally.y + offset.y;
+      if (!inWorld(x, y)) continue;
+      if (x === state.cursor.x && y === state.cursor.y) continue;
+      const there = cellKey({ x, y });
+      if (occupied.has(there)) continue;
+      const distance = distanceAt(distances, { x, y });
+      if (distance < 0 || distance >= currentDistance) continue;
+      occupied.delete(here);
+      occupied.add(there);
+      moved[index] = { ...ally, x, y };
+      break;
+    }
+  }
+  return moved;
+}
+
 function moveHostiles(state: InternalWorld, troops: readonly Troop[]): readonly Troop[] {
   if (!troops.some(troop => troop.faction === "enemy")) return troops;
   const distances = distanceField([state.cursor]);
@@ -1421,7 +1461,10 @@ function tickWorld(state: InternalWorld): InternalWorld {
     buildings = summoned.buildings;
     troops = summoned.troops;
     troops = spawnWave(state, troops, tick);
-    if (tick % MOVE_INTERVAL === 0) troops = moveHostiles(state, troops);
+    if (tick % MOVE_INTERVAL === 0) {
+      troops = moveAllies(state, troops);
+      troops = moveHostiles(state, troops);
+    }
     const fought = combatPhase(troops, state.cursor, cursorHp, tick);
     troops = fought.troops;
     cursorHp = fought.cursorHp;
