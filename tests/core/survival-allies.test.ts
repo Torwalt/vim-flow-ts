@@ -67,6 +67,19 @@ test("allies step north on a tie, reach the rally and then wait there", () => {
   expect(positions(state)).toEqual([["b001#1", 10, 10]]);
 });
 
+test("allies keep interior destinations while the cursor stands on the boundary", () => {
+  const start = game.scenario({
+    rules: "survival",
+    cursor: { x: 5, y: 0 },
+    rally: { x: 5, y: 2 },
+    buildings: ring({ x: 20, y: 10 }),
+    troops: [ally(1, 5, 5)],
+  });
+  const state = game.advance(start, 10 * TICK_MS);
+  expect(positions(state)).toEqual([["b001#1", 5, 3]]);
+  expect(game.observe(game.scenario(game.snapshot(state)))).toEqual(game.observe(state));
+});
+
 test("stable ally order packs a group around the rally without overlap", () => {
   const state = game.advance(game.scenario({
     rules: "survival",

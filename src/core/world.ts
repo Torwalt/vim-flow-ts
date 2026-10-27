@@ -564,11 +564,14 @@ function inside(rect: Rect, x: number, y: number): boolean {
   return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
 }
 
+function inInterior(x: number, y: number): boolean {
+  return x >= 1 && y >= 1 && x <= WORLD_WIDTH - 2 && y <= WORLD_HEIGHT - 2;
+}
+
 function insideInterior(center: Cursor): boolean {
   const rect = patch(center);
-  return rect.x >= 1 && rect.y >= 1
-    && rect.x + rect.width - 1 <= WORLD_WIDTH - 2
-    && rect.y + rect.height - 1 <= WORLD_HEIGHT - 2;
+  return inInterior(rect.x, rect.y)
+    && inInterior(rect.x + rect.width - 1, rect.y + rect.height - 1);
 }
 
 function overlapsGate(center: Cursor): boolean {
@@ -584,9 +587,7 @@ function buildingCenter(value: unknown, label: string): Cursor {
 
 function rallyCell(value: unknown, label: string): Cursor {
   const cell = position(value, label);
-  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
-    fail(`${label} must be an interior cell`);
-  }
+  if (!inInterior(cell.x, cell.y)) fail(`${label} must be an interior cell`);
   if (inside(GATE_RESERVED, cell.x, cell.y)) fail(`${label} must stay outside the enemy gate`);
   return cell;
 }
@@ -658,9 +659,7 @@ const ALLY_TROOP_ID_PATTERN = /^b(00[1-9]|0[12][0-9]|03[0-2])#\d+$/;
 
 function troopPosition(value: Record<string, unknown>, label: string): Cursor {
   const cell = position(value, label);
-  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
-    fail(`${label} must be an interior cell`);
-  }
+  if (!inInterior(cell.x, cell.y)) fail(`${label} must be an interior cell`);
   return cell;
 }
 
@@ -1278,12 +1277,21 @@ function distanceField(sources: readonly Cursor[]): Int32Array {
   const distances = new Int32Array(worldSize);
   distances.fill(-1);
   const queue: number[] = [];
+  const seed = (x: number, y: number, distance: number): void => {
+    if (!inInterior(x, y)) return;
+    const index = y * WORLD_WIDTH + x;
+    if (distances[index] !== -1) return;
+    distances[index] = distance;
+    queue.push(index);
+  };
   for (const source of sources) {
     if (!inWorld(source.x, source.y)) continue;
-    const index = source.y * WORLD_WIDTH + source.x;
-    if (distances[index] !== -1) continue;
-    distances[index] = 0;
-    queue.push(index);
+    if (inInterior(source.x, source.y)) seed(source.x, source.y, 0);
+  }
+  for (const source of sources) {
+    if (!inWorld(source.x, source.y)) continue;
+    if (inInterior(source.x, source.y)) continue;
+    for (const offset of MOVE_OFFSETS) seed(source.x + offset.x, source.y + offset.y, 1);
   }
   for (let head = 0; head < queue.length; head++) {
     const index = queue[head] ?? 0;
@@ -1293,7 +1301,7 @@ function distanceField(sources: readonly Cursor[]): Int32Array {
     for (const offset of MOVE_OFFSETS) {
       const nx = x + offset.x;
       const ny = y + offset.y;
-      if (!inWorld(nx, ny)) continue;
+      if (!inInterior(nx, ny)) continue;
       const nextIndex = ny * WORLD_WIDTH + nx;
       if (distances[nextIndex] !== -1) continue;
       distances[nextIndex] = next;
@@ -1327,7 +1335,7 @@ function moveAllies(state: InternalWorld, troops: readonly Troop[]): readonly Tr
     for (const offset of MOVE_OFFSETS) {
       const x = ally.x + offset.x;
       const y = ally.y + offset.y;
-      if (!inWorld(x, y)) continue;
+      if (!inInterior(x, y)) continue;
       if (x === state.cursor.x && y === state.cursor.y) continue;
       const there = cellKey({ x, y });
       if (occupied.has(there)) continue;
@@ -1360,7 +1368,7 @@ function moveHostiles(state: InternalWorld, troops: readonly Troop[]): readonly 
     for (const offset of MOVE_OFFSETS) {
       const x = enemy.x + offset.x;
       const y = enemy.y + offset.y;
-      if (!inWorld(x, y)) continue;
+      if (!inInterior(x, y)) continue;
       if (x === state.cursor.x && y === state.cursor.y) continue;
       const there = cellKey({ x, y });
       if (occupied.has(there)) continue;
@@ -1697,7 +1705,7 @@ function endSurvivalInsert(state: InternalWorld, notice: string): World {
 }
 
 function rallyProblem(cell: Cursor): string | null {
-  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
+  if (!inInterior(cell.x, cell.y)) {
     return "Cannot rally: the cell must be interior";
   }
   if (inside(GATE_RESERVED, cell.x, cell.y)) return "Cannot rally: the cell is inside the enemy gate";

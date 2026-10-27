@@ -32,7 +32,7 @@ Status values: **implemented** and **preserved** (historical behavior kept).
 | §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | `tests/core/survival-finder.test.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
 | §6 living troop identity, HP, cooldowns, replacement production and simultaneous combat | `game.advance`, `game.scenario`, `game.snapshot`, `game.observe`, `game.imps`; exported `ALLY_HP`, `ENEMY_HP`, `CURSOR_MAX_HP`, `ATTACK_COOLDOWN` | `tests/core/survival-combat.test.ts`; legacy economy/clock suites | implemented |
 | §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented |
-| §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | implemented |
+| §7 fixed-tick wave sizes, enemy cap, gate-perimeter spawns and interior-only deterministic hostile BFS movement | `game.advance`, `game.observe`, `game.scenario`; exported `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE` | `tests/core/survival-waves.test.ts` | implemented |
 | §7 cursor collision contact, lethal freeze, game over and Enter restart across normal and finder movement | `game.dispatch`, `game.advance`, `game.observe`, `game.snapshot`; web clock reset | `tests/core/survival-waves.test.ts`, `tests/browser/survival-death.spec.ts` | implemented |
 | §7 allied rally movement, aggro range and shared distance fields | `game.advance`, `game.observe`, `game.snapshot`; exported `ALLY_AGGRO_RADIUS`; web render/HUD | `tests/core/survival-allies.test.ts`; `tests/browser/survival-construction.spec.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
 | §8 cyan ally and orange enemy `i` glyphs, non-color faction markers and injured health bars | web `render`, `drawTroopMarkers`, colors, style and markup | `tests/browser/survival-complete-loop.spec.ts` | implemented |
@@ -143,12 +143,17 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
   16)`; spawns use the fixed gate's 16-cell Chebyshev-distance-2 perimeter in
   row-major order, skip live troops and the cursor, fill the first available
   slots up to the wave size and the 128-enemy cap, and discard the remainder.
-  Enemy IDs use the wave and spawn ordinal. Enemies move on every fifth tick over
-  one BFS distance field from the cursor, in lexical ID order, choosing the first
-  unoccupied cardinal neighbour with a strictly smaller distance in
-  north/east/south/west order; adjacent enemies and enemies beside the cursor
-  hold. Earlier moves count as occupancy, so units may follow a vacated cell but
-  never overlap, swap or enter the cursor.
+  Enemy IDs use the wave and spawn ordinal. Troop destinations and distance
+  fields cover only the interior `x=1..238, y=1..158`; an interior source seeds
+  distance zero, a boundary cursor seeds its cardinal interior neighbours at
+  distance one, and a corner cursor leaves the hostile field unreachable so
+  enemies wait there. Navigation still reaches boundary cells. Enemies move on
+  every fifth tick over one BFS distance field from the cursor, in lexical ID
+  order, choosing the first unoccupied cardinal neighbour with a strictly
+  smaller distance in north/east/south/west order; adjacent enemies and enemies
+  beside the cursor hold. Earlier moves count as occupancy, so units may follow
+  a vacated cell but never overlap, swap, enter the cursor or stand on the
+  boundary.
 - Every survival cursor displacement, including finder jumps, uses the shared
   sweep. A hostile sample or diagonal side cell stops movement at the last safe
   sample and, if that enemy's cooldown is ready, deals one damage and sets its
@@ -171,6 +176,17 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
   two-argument call and the first-playable render remain unchanged.
 
 ## Test and interface revisions
+
+The boundary-chase fix restricts troop destinations and distance-field traversal
+to the interior `x=1..238, y=1..158` while leaving cursor navigation free to
+reach the boundary. An interior source seeds distance zero; a boundary cursor
+seeds its cardinal interior neighbours at distance one; a corner cursor leaves
+the hostile field with no reachable interior cells. No public interface changed.
+`tests/core/survival-waves.test.ts` adds the exact top-edge chase at cursor
+`(5,0)` with an enemy moving east from `(4,1)` to `(5,1)` and round-tripping,
+plus all four edges, all four corners, and partition invariance with occupancy.
+`tests/core/survival-allies.test.ts` adds allies advancing to a top-edge rally
+while the boundary cursor stays put.
 
 Unit 4.1 adds presentation-only faction colors, faction markers and injured
 health bars in `src/web/main.ts`, HUD elements `#hud-hp`, `#hud-wave`,

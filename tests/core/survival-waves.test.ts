@@ -118,6 +118,69 @@ test("occupied gate perimeter cells are skipped while the cursor and gate stay f
   expect(enemies(far).every(troop => troop.x >= 198 && troop.x <= 200 && troop.y === 133)).toBe(true);
 });
 
+test("a boundary cursor seeds its interior neighbours without drawing hostiles onto the boundary", () => {
+  const moved = game.advance(game.scenario({
+    rules: "survival",
+    cursor: { x: 5, y: 0 },
+    elapsedTicks: 4,
+    troops: [{ faction: "enemy", id: "e", x: 4, y: 1, nextAttackTick: 100 }],
+  }), TICK_MS);
+  expect(enemies(moved).map(troop => ({ id: troop.id, x: troop.x, y: troop.y })))
+    .toEqual([{ id: "e", x: 5, y: 1 }]);
+  expect(game.observe(game.scenario(game.snapshot(moved)))).toEqual(game.observe(moved));
+
+  const cases = [
+    { cursor: { x: 5, y: 0 }, enemy: { x: 5, y: 3 }, expected: { x: 5, y: 2 } },
+    { cursor: { x: 5, y: 159 }, enemy: { x: 5, y: 156 }, expected: { x: 5, y: 157 } },
+    { cursor: { x: 0, y: 5 }, enemy: { x: 3, y: 5 }, expected: { x: 2, y: 5 } },
+    { cursor: { x: 239, y: 5 }, enemy: { x: 236, y: 5 }, expected: { x: 237, y: 5 } },
+  ];
+  for (const { cursor, enemy, expected } of cases) {
+    const state = game.advance(game.scenario({
+      rules: "survival",
+      cursor,
+      elapsedTicks: 4,
+      troops: [{ faction: "enemy", id: "e", ...enemy, nextAttackTick: 1_000_000 }],
+    }), TICK_MS);
+    expect(enemies(state).map(troop => ({ id: troop.id, x: troop.x, y: troop.y })))
+      .toEqual([{ id: "e", ...expected }]);
+    expect(game.observe(game.scenario(game.snapshot(state)))).toEqual(game.observe(state));
+  }
+
+  for (const cursor of [
+    { x: 0, y: 0 }, { x: 239, y: 0 }, { x: 0, y: 159 }, { x: 239, y: 159 },
+  ]) {
+    const state = game.advance(game.scenario({
+      rules: "survival",
+      cursor,
+      elapsedTicks: 4,
+      troops: [{ faction: "enemy", id: "e", x: 2, y: 2, nextAttackTick: 1_000_000 }],
+    }), 20 * TICK_MS);
+    expect(enemies(state).map(troop => ({ id: troop.id, x: troop.x, y: troop.y })))
+      .toEqual([{ id: "e", x: 2, y: 2 }]);
+  }
+});
+
+test("boundary chase with occupancy is partition-invariant", () => {
+  const start = game.scenario({
+    rules: "survival",
+    cursor: { x: 5, y: 0 },
+    elapsedTicks: 4,
+    troops: [
+      { faction: "enemy", id: "e-a", x: 5, y: 3, nextAttackTick: 1_000_000 },
+      { faction: "enemy", id: "e-b", x: 4, y: 2, nextAttackTick: 1_000_000 },
+    ],
+  });
+  const once = game.advance(start, 25 * TICK_MS);
+  let partitioned = start;
+  for (const part of [1, 4, 5, 15]) partitioned = game.advance(partitioned, part * TICK_MS);
+  expect(game.observe(partitioned)).toEqual(game.observe(once));
+  expect(enemies(once).map(troop => ({ id: troop.id, x: troop.x, y: troop.y }))).toEqual([
+    { id: "e-a", x: 5, y: 1 },
+    { id: "e-b", x: 4, y: 1 },
+  ]);
+});
+
 test("hostile BFS uses stable ID order, earlier moves and a deterministic congestion hold", () => {
   let state = game.advance(game.scenario(enemyScenario([
     { faction: "enemy", id: "e1", x: 20, y: 20, nextAttackTick: 1_000_000 },
