@@ -149,6 +149,31 @@
         "reasoning": 36332,
         "cache_read": 8612096
       }
+    },
+    "3.2": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:40:49+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "6e6641b31200f582f4244ffc5c3fec715822dea0",
+      "commits": [
+        "bb0717b44b62dee1ddf6370ea3662ff311a5c262 Add survival waves, hostile chase and cursor death"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `bb0717b` adds fixed-gate survival waves, hostile chasing, cursor collision, game over and restart. Waves start at tick 300 and every 200 ticks, with size `min(n+2,16)`, spawning the first free cells of the gate's 16-cell Chebyshev-radius-2 perimeter up to the 128-enemy cap. Enemies move every fifth tick in lexical ID order over one BFS field from the cursor, holding when adjacent to an ally or the cursor, with earlier moves already counted as occupancy. Cursor displacement (normal, find, line, word and finder) now sees living hostile troops: the first hostile sample or diagonal side cell stops at the last safe sample, deals 1 if its cooldown is ready, and sets `nextAttackTick=elapsedTicks+10`. HP 0 clears mode/source/drafts, drops the remainder, ignores later play, and unblocked Enter restarts a fresh survival world. Browser restart resets the clock anchor. Observations add `gameOver`, `wave` and `nextWaveTick`; exports add `ENEMY_CAP`, `WAVE_START_TICK`, `WAVE_INTERVAL`, `WAVE_MAX_SIZE`.\n\n**Landmark drift** — `tickWorld` now runs economy, `spawnWave`, `moveHostiles` on movement ticks, `combatPhase`, then terminal handling. New helpers sit beside `combatPhase`: `MOVE_OFFSETS`, `distanceField`, `moveHostiles`, `GATE_PERIMETER`, `waveAt`, `waveState`, `spawnWave`, `isGameOver`, `terminal`. `hostileAt` now returns the first enemy troop instead of consulting legacy `impsOf`; `moveCursor`/`contact` wrap the existing sweep. `dispatch` handles blur/visibility first, then blocks all non-restart events while game over. `place`/`link` now also refuse a dead world.\n\n**Deviations from the work order** — Distance fields and hostile steps cover all in-bounds cells, not strictly `x=1..238,y=1..158`, so a cursor standing on the `#` border stays chaseable; placements and wave spawns still use interior cells only. `wave`/`nextWaveTick` are derived from `elapsedTicks` rather than stored, so constructing a scenario at a wave tick reports that wave without retroactively spawning it. Wave IDs are `e\u003cwave\u003e-\u003cordinal\u003e`; an existing scenario troop with a colliding ID makes spawning skip that ordinal. The wave spawn remains a live-prefix slice, so occupied/blocked perimeter cells make later available cells spawn earlier. `main.ts` only gains game-over clock text and datasets; the full HP/wave HUD remains unit 4.1.\n\n**What the next session must know** — Allies are still stationary; only `moveHostiles` exists. `distanceField(sources)` is already multi-source and returns `-1` unreachable, so unit 3.3 can reuse it for rally, cursor and enemy fields without another BFS. Hostile movement selects the first unoccupied neighbour with strictly smaller distance in north/east/south/west order; congestion holds rather than routing around. Contact damage uses the current `elapsedTicks`, so repeated blocked input at one tick cannot stack; normal tick combat then resumes on the same enemy cooldown. Death also clears `notice` on blur/hidden; the core notice on death is `Game over — Enter restart`. `snapshot`/`scenario` have no new fields: game over is `cursorHp===0` and wave state is computed from `elapsedTicks`; a dead snapshot round-trips game state but not the transient notice. `just verify` and `just test` pass at HEAD: 278 core tests and 104 browser tests.\n\n**Open problems** — Allied movement, rally-directed movement, aggro-return and the shared multi-source movement phase remain for 3.3. The HUD still lacks full HP/wave/enemy-population presentation and explicit non-color faction markers; that is 4.1.",
+      "session_id": "ses_e82df9f8cffewOK19ZBruEdiDE",
+      "cost_usd": 0.10915630199999997,
+      "harness": "opencode",
+      "elapsed_s": 615,
+      "session_s": 599,
+      "verify_s": 15,
+      "test_s": 1,
+      "tokens": {
+        "input": 339585,
+        "output": 22096,
+        "reasoning": 47173,
+        "cache_read": 5552384
+      }
     }
   }
 }
