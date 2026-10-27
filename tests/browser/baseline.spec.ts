@@ -3,7 +3,7 @@ import { expect, test } from "./test";
 test("loads the TypeScript canvas without browser errors", async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/?clock=manual");
+  await page.goto("/?clock=manual&rules=first-playable");
   await expect(page).toHaveTitle("vim-flow");
   await expect(page.locator("#world")).toHaveAttribute("data-ready", "true");
 

@@ -451,12 +451,15 @@ test("time advances through Insert and Name while drafts survive, and blur cance
     .toEqual({ mode: "Normal", source: null, suspended: true });
 });
 
-test("survival has no Build menu while the legacy Build and Escape staging still run", () => {
+test("survival Space f opens the finder while the legacy Build and Escape staging still run", () => {
   let survival = key(game.initial({ rules: "survival" }), " ");
   survival = key(survival, "f");
   let observation = game.observe(survival);
-  expect({ mode: observation.mode, buildings: observation.buildingCount })
-    .toEqual({ mode: "Normal", buildings: 0 });
+  expect({
+    mode: observation.mode,
+    buildings: observation.buildingCount,
+    finder: observation.finder?.entries.map(entry => entry.id),
+  }).toEqual({ mode: "Finder", buildings: 0, finder: ["gate", "rally"] });
 
   let legacy = game.scenario({ rules: "first-playable", cursor: { x: 13, y: 10 } });
   legacy = key(legacy, " ");

@@ -41,6 +41,11 @@ const colors = {
   linkSelected: "#8fd3c0",
   source: "#d9a05b",
   rally: "#e3a94f",
+  finderPanel: "#121b15",
+  finderBorder: "#5d7a58",
+  finderText: "#c6d4b4",
+  finderMuted: "#7f9179",
+  finderSelected: "#263a29",
 };
 
 function required<T extends Element>(selector: string): T {
@@ -88,7 +93,7 @@ declare global {
 const parameters = new URLSearchParams(window.location.search);
 const manualClock = parameters.get("clock") === "manual";
 const requestedRules = parameters.get("rules");
-const initialRules: RulesProfile = requestedRules === "survival" ? "survival" : "first-playable";
+const initialRules: RulesProfile = requestedRules === "first-playable" ? "first-playable" : "survival";
 let manualNow = 0;
 const clock = new ElapsedClock(manualClock ? 0 : null);
 let state: World = game.initial({ rules: initialRules });
@@ -97,6 +102,15 @@ let viewport: Viewport = { columns: 1, rows: 1 };
 let composing = false;
 
 function describeSite(observation: Observation): { label: string; resources: string } {
+  if (observation.mode === "Finder") {
+    const finder = observation.finder;
+    const selected = finder === null ? undefined : finder.entries[finder.selection];
+    const query = finder === null || finder.query === "" ? "_" : finder.query;
+    return {
+      label: selected === undefined ? "FINDER no result" : `FINDER ${selected.name}`,
+      resources: `${query} · ↑/↓ select · Enter jump · Esc close`,
+    };
+  }
   if (observation.mode === "Insert") {
     const candidates = observation.candidates.length === 0
       ? "no matching command"
@@ -291,6 +305,54 @@ function drawRally(observation: Observation): void {
   context.restore();
 }
 
+function drawFinder(observation: Observation, cssWidth: number, cssHeight: number): void {
+  const finder = observation.finder;
+  if (finder === null) return;
+  const available = cssWidth - gutterPixels - 16;
+  if (available < 80) return;
+  const lineHeight = 18;
+  const headerHeight = 30;
+  const visibleRows = Math.max(1, Math.floor((cssHeight - headerHeight - 16) / lineHeight));
+  const start = finder.entries.length <= visibleRows
+    ? 0
+    : Math.min(
+      Math.max(0, finder.selection - Math.floor(visibleRows / 2)),
+      finder.entries.length - visibleRows,
+    );
+  const rows = finder.entries.slice(start, start + visibleRows);
+  const width = Math.min(460, available);
+  const left = gutterPixels + 8;
+  const top = 8;
+  const height = headerHeight + Math.max(1, rows.length) * lineHeight + 8;
+  context.save();
+  context.beginPath();
+  context.rect(left, top, width, height);
+  context.clip();
+  context.fillStyle = colors.finderPanel;
+  context.fillRect(left, top, width, height);
+  context.strokeStyle = colors.finderBorder;
+  context.lineWidth = 1;
+  context.strokeRect(left + 0.5, top + 0.5, width - 1, height - 1);
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  context.fillStyle = colors.finderMuted;
+  context.fillText(`FINDER  ${finder.query === "" ? "_" : finder.query}`, left + 10, top + 14);
+  if (rows.length === 0) {
+    context.fillStyle = colors.finderText;
+    context.fillText("no matching destination", left + 10, top + headerHeight + lineHeight / 2);
+  }
+  for (const [index, entry] of rows.entries()) {
+    const row = top + headerHeight + index * lineHeight;
+    if (start + index === finder.selection) {
+      context.fillStyle = colors.finderSelected;
+      context.fillRect(left + 5, row, width - 10, lineHeight);
+    }
+    context.fillStyle = start + index === finder.selection ? colors.field : colors.finderText;
+    context.fillText(`${entry.name} | ${entry.type} | ${entry.id}`, left + 10, row + lineHeight / 2);
+  }
+  context.restore();
+}
+
 function drawSourceHighlight(observation: Observation): void {
   if (observation.pendingSource === null || observation.pendingFrom === null) return;
   const left = (observation.pendingFrom.x - 5 - camera.x) * CELL_WIDTH + gutterPixels;
@@ -393,6 +455,7 @@ function render(): void {
   }
 
   drawRally(observation);
+  drawFinder(observation, cssWidth, cssHeight);
 
   const site = describeSite(observation);
   setText(hudSite, site.label);
@@ -435,6 +498,11 @@ function render(): void {
   canvas.dataset.insertCell = observation.insertCell === null ? "" : `${observation.insertCell.x},${observation.insertCell.y}`;
   canvas.dataset.nameTarget = observation.nameTarget ?? "";
   canvas.dataset.candidates = observation.candidates.join(",");
+  canvas.dataset.finderQuery = observation.finder?.query ?? "";
+  canvas.dataset.finderSelection = String(observation.finder?.selection ?? 0);
+  canvas.dataset.finderEntries = observation.finder === null
+    ? ""
+    : observation.finder.entries.map(entry => `${entry.name}|${entry.type}|${entry.id}`).join(";");
   canvas.dataset.notice = observation.notice;
   canvas.dataset.links = observation.links.map(link => `${link.source}>${link.target}`).join(",");
   canvas.dataset.linkCount = String(observation.links.length);
@@ -507,12 +575,17 @@ canvas.addEventListener("keydown", (event) => {
   const observation = game.observe(state);
   const survival = game.snapshot(state).rules === "survival";
   const handlingTab = survival && observation.mode === "Insert";
-  const handlingEnter = survival && (observation.mode === "Insert" || observation.mode === "Name");
+  const handlingFinder = survival && observation.mode === "Finder";
+  const handlingEnter = survival
+    && (observation.mode === "Insert" || observation.mode === "Name" || handlingFinder);
+  const handlingArrow = handlingFinder
+    && (event.key === "ArrowUp" || event.key === "ArrowDown");
   if (!chord(event) && (
     event.key === "Escape"
     || singleCodePoint(event.key)
     || (event.key === "Tab" && handlingTab)
     || (event.key === "Enter" && handlingEnter)
+    || handlingArrow
   )) event.preventDefault();
   apply({ type: "key", key: event.key, blocked: chord(event) });
 });

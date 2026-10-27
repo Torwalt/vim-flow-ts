@@ -3,8 +3,9 @@
 Authority: [Cursor survival](plans/CURSOR_SURVIVAL.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
 placement, the fixed gate, deterministic terrain, the relative row gutter,
-typed construction, names, connections and the shared rally command. Clauses
-owned by later units are marked pending; they are not claimed as implemented.
+typed construction, names, connections, the shared rally command and the
+building finder. Clauses owned by later units are marked pending; they are not
+claimed as implemented.
 
 Status values: **implemented**, **preserved** (historical behavior kept), and
 **pending** (named execution unit owns it).
@@ -16,7 +17,7 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 | Omitted profile and explicit `first-playable` keep historical behavior; snapshots omit the profile. | `game.initial`, `game.scenario`, `game.snapshot`, `game.observe`, `game.field` | `tests/core/survival-profile.test.ts`; every historical suite | implemented |
 | `{ rules: "survival" }` selects an empty survival world with no fixed sites or buildings. | `game.initial`, `game.scenario`, `game.observe`, `game.snapshot`, `game.siteAt`, `game.field` | `tests/core/survival-profile.test.ts` | implemented |
 | Survival scenarios validate their profile and reject legacy fixed-site data. | `game.initial`, `game.scenario` | `tests/core/survival-profile.test.ts` | implemented |
-| Browser can select the historical profile; default play is unchanged in this unit. | `?rules=first-playable`, `?rules=survival`, `window.__vimFlowTest.load` | `tests/browser/profile.spec.ts` | implemented routing; default switch pending 2.3 |
+| The browser defaults to survival; `?rules=first-playable` selects the historical profile and `?rules=survival` selects survival explicitly. | `?rules=first-playable`, `?rules=survival`, `window.__vimFlowTest.load` | `tests/browser/profile.spec.ts`; historical suites select `?rules=first-playable` | implemented |
 | The 40x20 navigation contract and the 18-property / 53-case first-playable corpus stay runnable. | `game.*`, unchanged navigation facade | `spec/first-playable`, `tests/core/first-playable-*`, historical browser suites | preserved |
 | Shared navigation, clock and economy algorithms remain shared rather than forked. | `src/core/game-navigation.ts`, `game.advance`, `game.dispatch` | historical suites plus survival profile tests | preserved |
 | This coverage map is maintained as sections land. | - | this file | implemented |
@@ -28,7 +29,7 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 | §3 terrain, landmarks, grass, gutter and relative row numbers | `game.field`, `game.glyphAt`, `game.dispatch`; web `visibleCells`, `followCamera`, `gutterLabel`, `render` | `tests/core/survival-terrain.test.ts`, `tests/browser/survival-terrain.spec.ts` | implemented |
 | §4 dynamic building identity, cursor-centred 11x7 placement, overlap/gate/edge validation, 32-building cap and dynamic links | `game.place`, `game.link`, `game.scenario`, `game.snapshot`, `game.observe`, `game.siteAt` | `tests/core/survival-buildings.test.ts` | implemented |
 | §4 typed Insert construction, autocomplete, names, shared rally commands and connect through input | `game.dispatch`, `game.observe`, `game.snapshot`, `game.place` | `tests/core/survival-construction.test.ts`, `tests/browser/survival-construction.spec.ts` | implemented |
-| §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | finder core and browser suites; `?rules=first-playable` retained for historical suites | 2.3 | pending |
+| §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | `tests/core/survival-finder.test.ts`, `tests/browser/survival-finder.spec.ts` | implemented |
 | §6 living troop identity, HP, cooldowns, replacement production and simultaneous combat | `game.advance`, `game.scenario`, `game.snapshot`, `game.observe`, `game.imps` | economy/combat tests with validated survival scenarios | 3.1 | pending |
 | §7 fixed enemy gate art, reserved patch, passable geometry and default shared rally cell | `game.field`, `game.glyphAt`, `game.place`, `game.observe`, `game.scenario`, `game.snapshot` | `tests/core/survival-buildings.test.ts` | implemented (movement later) |
 | §7 waves, chase/collision, allied rally movement, clock phases and death/restart | `game.dispatch`, `game.advance`, `game.snapshot`, `game.observe`; `game-navigation`; web clock | movement/wave/death core, partition and browser tests | 3.2 (waves/collision/death), 3.3 (allied movement) | pending |
@@ -50,8 +51,9 @@ the historical shapes; only survival snapshots carry `rules`.
 ## Intentional replacements of old requirements
 
 These are the deliberate survival changes. The empty-site boundary, stable
-dynamic building IDs/links, typed construction, names and rally input are
-implemented; troop, finder and combat changes stay pending until their units.
+dynamic building IDs/links, typed construction, names, rally input and the
+building finder are implemented; troop and combat changes stay pending until
+their units.
 
 | Old first-playable behavior | Survival behavior | Owner |
 | --- | --- | --- |
@@ -61,11 +63,11 @@ implemented; troop, finder and combat changes stay pending until their units.
 | Stationary slot imps | Living allies with IDs, HP, a shared rally and waves | 3.1, 3.3 |
 | Immortal cursor | Mortal cursor, collision and game-over/restart | 3.1, 3.2 |
 | One fixed terrain composition | Deterministic landmarks, grass texture and the fixed enemy gate | 1.2 (gate), 2.1 (terrain) |
-| No building finder | Space `f` finder for names, types, IDs, rally and gate | 2.3 |
+| No building finder | Space `f` finder for names, types, IDs, rally and gate | 2.3 (implemented) |
 
 ## Survival interface additions
 
-Units 1.2, 2.1 and 2.2 add these public interfaces without changing the historical ones:
+Units 1.2, 2.1, 2.2 and 2.3 add these public interfaces without changing the historical ones:
 
 - `game.place(world, center, kind)` places a survival well or ring with an
   `11x7` footprint centred on `(center.x, center.y)`. It returns the input world
@@ -98,6 +100,14 @@ Units 1.2, 2.1 and 2.2 add these public interfaces without changing the historic
   tree strip keep precedence, and placed buildings clear terrain only inside
   their own footprint. Blank cells stay literal spaces in the logical field;
   grass dots exist only in the browser presentation.
+- Normal Space `f` in survival opens `Finder`: `observation.finder` exposes the
+  query, clamped selection and ordered `name | type | ID` entries for built
+  buildings plus `Rally | rally | rally` and `Enemy gate | spawn | gate`.
+  Queries match ASCII-case-insensitive subsequences, Enter moves to the selected
+  destination through the same survival displacement sweep as normal navigation,
+  no-result Enter keeps Finder open, and Escape or blur closes it. Escape keeps
+  a staged source; blur/hidden clear it. The browser defaults to survival and
+  historical suites explicitly select `?rules=first-playable`.
 - `src/web/camera.ts` exports `GUTTER_COLUMNS = 4`, `GUTTER_WIDTH = 48`, an
   optional gutter parameter on `visibleCells`, and `gutterLabel`. Survival
   subtracts the gutter before viewport/camera math; the historical

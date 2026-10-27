@@ -7,6 +7,8 @@ export type {
   BuildingSetup,
   Cursor,
   DynamicBuildingId,
+  FinderEntry,
+  FinderObservation,
   GameEvent,
   GlyphField,
   Imp,

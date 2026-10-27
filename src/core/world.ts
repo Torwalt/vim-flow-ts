@@ -87,6 +87,32 @@ export type BuildingObservation =
     readonly name: string;
   };
 
+export type FinderEntry =
+  | {
+    readonly destination: "building";
+    readonly name: string;
+    readonly type: "mana well" | "summoning ring";
+    readonly id: DynamicBuildingId;
+  }
+  | {
+    readonly destination: "rally";
+    readonly name: "Rally";
+    readonly type: "rally";
+    readonly id: "rally";
+  }
+  | {
+    readonly destination: "gate";
+    readonly name: "Enemy gate";
+    readonly type: "spawn";
+    readonly id: "gate";
+  };
+
+export interface FinderObservation {
+  readonly query: string;
+  readonly selection: number;
+  readonly entries: readonly FinderEntry[];
+}
+
 export interface Observation {
   readonly width: number;
   readonly height: number;
@@ -100,6 +126,7 @@ export interface Observation {
   readonly insertCell: Cursor | null;
   readonly nameTarget: DynamicBuildingId | null;
   readonly candidates: readonly string[];
+  readonly finder: FinderObservation | null;
   readonly pendingFrom: Cursor | null;
   readonly notice: string;
   readonly commandBuffer: string;
@@ -176,7 +203,8 @@ type LeaderMode = { readonly $: "Leader"; readonly count: 0 };
 type BuildMode = { readonly $: "Build"; readonly count: 0 };
 type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: BuildingId | null };
 type NameMode = { readonly $: "Name"; readonly count: 0; readonly id: DynamicBuildingId };
-type GameMode = Mode | LeaderMode | BuildMode | InsertMode | NameMode;
+type FinderMode = { readonly $: "Finder"; readonly count: 0 };
+type GameMode = Mode | LeaderMode | BuildMode | InsertMode | NameMode | FinderMode;
 
 interface InternalWorld {
   readonly rules: RulesProfile;
@@ -192,6 +220,8 @@ interface InternalWorld {
   readonly insertSite: BuildingId | null;
   readonly insertCell: Cursor | null;
   readonly nameTarget: DynamicBuildingId | null;
+  readonly finderOrigin: Cursor | null;
+  readonly finderSelection: number;
   readonly draft: string;
   readonly notice: string;
   readonly navRows: readonly string[] | null;
@@ -255,6 +285,10 @@ function nameMode(id: DynamicBuildingId): NameMode {
   return { $: "Name", count: 0, id };
 }
 
+function finderMode(): FinderMode {
+  return { $: "Finder", count: 0 };
+}
+
 function isNavigationMode(mode: GameMode): mode is Mode {
   return mode.$ === "Normal" || mode.$ === "FindRight" || mode.$ === "FindLeft" || mode.$ === "Go";
 }
@@ -269,6 +303,7 @@ function construct(data: InternalWorld): World {
     cursor: Object.freeze({ ...data.cursor }),
     mode: Object.freeze({ ...data.mode }),
     insertCell: data.insertCell === null ? null : Object.freeze({ ...data.insertCell }),
+    finderOrigin: data.finderOrigin === null ? null : Object.freeze({ ...data.finderOrigin }),
     buildings: new Map(data.buildings),
     dynamic: new Map(data.dynamic),
     rally: data.rally === null ? null : Object.freeze({ ...data.rally }),
@@ -370,6 +405,47 @@ function commandCandidates(state: InternalWorld): readonly string[] {
 
 function candidateMatches(state: InternalWorld): readonly string[] {
   return commandCandidates(state).filter(command => command.startsWith(state.draft));
+}
+
+function asciiLower(value: string): string {
+  return value.replace(/[A-Z]/g, character => String.fromCharCode(character.charCodeAt(0) + 32));
+}
+
+function isSubsequence(query: string, text: string): boolean {
+  let matched = 0;
+  for (const character of text) {
+    if (matched < query.length && character === query[matched]) matched++;
+  }
+  return matched === query.length;
+}
+
+function finderEntries(state: InternalWorld): readonly FinderEntry[] {
+  const entries: FinderEntry[] = [];
+  for (const id of [...state.dynamic.keys()].sort()) {
+    const building = state.buildings.get(id);
+    if (!building) continue;
+    entries.push({
+      destination: "building",
+      name: building.name ?? defaultBuildingName(building.kind, id),
+      type: building.kind === "well" ? "mana well" : "summoning ring",
+      id,
+    });
+  }
+  entries.push({ destination: "rally", name: "Rally", type: "rally", id: "rally" });
+  entries.push({ destination: "gate", name: "Enemy gate", type: "spawn", id: "gate" });
+  return entries.sort((left, right) => {
+    const leftName = asciiLower(left.name);
+    const rightName = asciiLower(right.name);
+    if (leftName !== rightName) return leftName < rightName ? -1 : 1;
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+  });
+}
+
+function finderMatches(state: InternalWorld): readonly FinderEntry[] {
+  const query = asciiLower(state.draft);
+  return finderEntries(state).filter(entry =>
+    isSubsequence(query, asciiLower(`${entry.name} ${entry.type} ${entry.id}`)),
+  );
 }
 
 function position(value: unknown, label: string): Cursor {
@@ -561,6 +637,8 @@ function parseScenario(spec: unknown): InternalWorld {
     insertSite: null,
     insertCell: null,
     nameTarget: null,
+    finderOrigin: null,
+    finderSelection: 0,
     draft: "",
     notice: "",
     navRows,
@@ -924,6 +1002,21 @@ function leaderStep(world: World, state: InternalWorld, key: string): World {
       notice: "",
     });
   }
+  if (state.rules === "survival") {
+    return construct({
+      ...state,
+      mode: finderMode(),
+      finderOrigin: { ...state.cursor },
+      finderSelection: 0,
+      menuSelection: null,
+      buildTarget: null,
+      insertSite: null,
+      insertCell: null,
+      nameTarget: null,
+      draft: "",
+      notice: "",
+    });
+  }
   const target = siteAt(world, state.cursor.x, state.cursor.y);
   if (target === null || !isSiteId(target)) {
     return construct({
@@ -1227,6 +1320,111 @@ function nameStep(world: World, state: InternalWorld, key: string): World {
   return construct({ ...state, draft: state.draft + key });
 }
 
+interface Displacement {
+  readonly cursor: Cursor;
+  readonly blockedBy: Cursor | null;
+}
+
+function hostileAt(state: InternalWorld, x: number, y: number): boolean {
+  return impsOf(state).some(imp => imp.x === x && imp.y === y);
+}
+
+function survivalDisplacement(state: InternalWorld, from: Cursor, to: Cursor): Displacement {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance = Math.max(Math.abs(dx), Math.abs(dy));
+  if (distance === 0) return { cursor: { ...from }, blockedBy: null };
+  const sign = (value: number): number => value < 0 ? -1 : value > 0 ? 1 : 0;
+  let accepted: Cursor = { ...from };
+  for (let step = 1; step <= distance; step++) {
+    const x = from.x + sign(dx) * Math.floor((2 * step * Math.abs(dx) + distance) / (2 * distance));
+    const y = from.y + sign(dy) * Math.floor((2 * step * Math.abs(dy) + distance) / (2 * distance));
+    if (x !== accepted.x && y !== accepted.y) {
+      const xSide = { x, y: accepted.y };
+      if (hostileAt(state, xSide.x, xSide.y)) return { cursor: accepted, blockedBy: xSide };
+      const ySide = { x: accepted.x, y };
+      if (hostileAt(state, ySide.x, ySide.y)) return { cursor: accepted, blockedBy: ySide };
+    }
+    const sample = { x, y };
+    if (hostileAt(state, sample.x, sample.y)) return { cursor: accepted, blockedBy: sample };
+    accepted = sample;
+  }
+  return { cursor: accepted, blockedBy: null };
+}
+
+function finderDestination(state: InternalWorld, entry: FinderEntry): Cursor | null {
+  if (entry.destination === "rally") return { ...(state.rally ?? DEFAULT_RALLY) };
+  if (entry.destination === "gate") return { ...GATE_CENTER };
+  const center = state.dynamic.get(entry.id);
+  return center === undefined ? null : { ...center };
+}
+
+function closeFinder(state: InternalWorld, cursor: Cursor, notice: string): World {
+  return construct({
+    ...state,
+    cursor: { ...cursor },
+    mode: normalMode(),
+    finderOrigin: null,
+    finderSelection: 0,
+    draft: "",
+    notice,
+  });
+}
+
+function finderStep(world: World, state: InternalWorld, key: string): World {
+  if (key === "Escape") {
+    return construct({
+      ...state,
+      mode: normalMode(),
+      finderOrigin: null,
+      finderSelection: 0,
+      draft: "",
+      notice: "",
+    });
+  }
+  const entries = finderMatches(state);
+  const last = entries.length - 1;
+  if (key === "ArrowDown") {
+    if (last < 0) return world;
+    const selection = Math.min(last, state.finderSelection + 1);
+    if (selection === state.finderSelection) return world;
+    return construct({ ...state, finderSelection: selection });
+  }
+  if (key === "ArrowUp") {
+    const selection = Math.max(0, state.finderSelection - 1);
+    if (selection === state.finderSelection) return world;
+    return construct({ ...state, finderSelection: selection });
+  }
+  if (key === "Backspace") {
+    if (state.draft === "") return world;
+    return construct({
+      ...state,
+      draft: Array.from(state.draft).slice(0, -1).join(""),
+      finderSelection: 0,
+    });
+  }
+  if (key === "Enter") {
+    const entry = entries[state.finderSelection];
+    if (entry === undefined) {
+      return construct({ ...state, notice: "No finder result" });
+    }
+    const destination = finderDestination(state, entry);
+    if (destination === null) {
+      return construct({ ...state, notice: "Finder destination is unavailable" });
+    }
+    const moved = state.navigationOnly
+      ? { cursor: destination, blockedBy: null }
+      : survivalDisplacement(state, state.cursor, destination);
+    const notice = moved.blockedBy === null
+      ? ""
+      : `Blocked by hostile at ${moved.blockedBy.x},${moved.blockedBy.y}`;
+    return closeFinder(state, moved.cursor, notice);
+  }
+  if (!printable(key)) return world;
+  if (Array.from(state.draft).length >= 32) return world;
+  return construct({ ...state, draft: state.draft + key, finderSelection: 0 });
+}
+
 function cancelInteraction(state: InternalWorld): InternalWorld {
   return {
     ...state,
@@ -1237,6 +1435,8 @@ function cancelInteraction(state: InternalWorld): InternalWorld {
     insertSite: null,
     insertCell: null,
     nameTarget: null,
+    finderOrigin: null,
+    finderSelection: 0,
     draft: "",
     notice: "",
   };
@@ -1264,6 +1464,7 @@ export function dispatch(world: World, event: GameEvent): World {
       : legacyInsertStep(world, state, event.key);
   }
   if (state.mode.$ === "Name") return nameStep(world, state, event.key);
+  if (state.mode.$ === "Finder") return finderStep(world, state, event.key);
   if (event.key === "Escape") {
     return construct({
       ...state,
@@ -1294,7 +1495,7 @@ export function dispatch(world: World, event: GameEvent): World {
       mode: leaderMode(),
       menuSelection: null,
       buildTarget: null,
-      notice: "Leader: f build",
+      notice: state.rules === "survival" ? "Leader: f find" : "Leader: f build",
     });
   }
   if (state.mode.$ === "Normal" && event.key === "i") {
@@ -1336,7 +1537,11 @@ export function dispatch(world: World, event: GameEvent): World {
     && next.mode.$ === state.mode.$
     && next.mode.count === state.mode.count
   ) return world;
-  return construct({ ...state, cursor: navigation.cursor(next.position), mode: next.mode });
+  const destination = navigation.cursor(next.position);
+  const cursor = state.rules === "survival" && !state.navigationOnly
+    ? survivalDisplacement(state, state.cursor, destination).cursor
+    : destination;
+  return construct({ ...state, cursor, mode: next.mode });
 }
 
 export function observe(world: World): Observation {
@@ -1393,6 +1598,16 @@ export function observe(world: World): Observation {
       }
     }
   }
+  const finderEntriesNow = state.mode.$ === "Finder" && state.rules === "survival" ? finderMatches(state) : [];
+  const finder: FinderObservation | null = state.mode.$ === "Finder"
+    ? {
+      query: state.draft,
+      selection: finderEntriesNow.length === 0
+        ? 0
+        : Math.min(state.finderSelection, finderEntriesNow.length - 1),
+      entries: finderEntriesNow,
+    }
+    : null;
   return {
     width: WORLD_WIDTH,
     height: WORLD_HEIGHT,
@@ -1406,6 +1621,7 @@ export function observe(world: World): Observation {
     insertCell: state.insertCell === null ? null : { ...state.insertCell },
     nameTarget: state.nameTarget,
     candidates: state.rules === "survival" && state.mode.$ === "Insert" ? candidateMatches(state) : [],
+    finder,
     pendingFrom,
     notice: state.notice,
     commandBuffer: state.draft,

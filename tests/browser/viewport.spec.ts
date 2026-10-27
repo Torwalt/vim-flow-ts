@@ -22,7 +22,7 @@ type State = {
 };
 
 async function open(page: Page): Promise<void> {
-  await page.goto("/?clock=manual");
+  await page.goto("/?clock=manual&rules=first-playable");
   await expect(page.locator("#world")).toHaveAttribute("data-ready", "true");
   await page.locator("#world").click({ position: { x: 8, y: 8 } });
 }

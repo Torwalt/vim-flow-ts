@@ -7,11 +7,11 @@ the design stabilizes. Historical measurements remain in the linked notes.
 Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
 [nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), started. The
 rules-profile boundary, dynamic free placement, terrain, relative row numbers,
-typed/named construction, connections and a shared rally command exist; the
-building finder and fixed-gate enemy waves remain planned. The first playable
-described below still runs by default; `?rules=first-playable` selects it
-explicitly and `?rules=survival` selects the survival world with its terrain,
-gutter and typed construction. See [survival coverage](docs/survival-coverage.md).
+typed/named construction, connections, a shared rally command and the building
+finder exist; fixed-gate enemy waves remain planned. The browser now defaults to
+survival with its terrain, gutter, typed construction and finder;
+`?rules=first-playable` selects the historical playable described below. See
+[survival coverage](docs/survival-coverage.md).
 
 ```sh
 nix develop
@@ -37,13 +37,16 @@ Navigation is **implemented and playable**: `h j k l`, `w b e W B E`, `0 ^ $`,
 The game fills the window with a 32px HUD, 12×20 cells, device-pixel-ratio
 backing and an integer-cell camera; pending counts and find/go prefixes appear
 in the HUD, and Escape or browser blur cancel them. The original 40×20
-navigation contract remains checked as a compatibility fixture. Space then `f`
-opens the targeted-site Build menu: `w`/`r` choose a well or ring, Enter builds
-it for free, Escape cancels and the core glyphs preview the choice. At a built
-site, `i` opens a 32-character command buffer: exact `connect` plus Escape or
-Enter stages a well, and Enter at a ring commits a persistent directed arrow
-from the well; ring Escape retries and Normal Escape or blur cancels. The pure
-core advances linked mana on exact 100 ms ticks and creates up to five ordered
+navigation contract remains checked as a compatibility fixture. In the
+first-playable profile, Space then `f` opens the targeted-site Build menu:
+`w`/`r` choose a well or ring, Enter builds it for free, Escape cancels and the
+core glyphs preview the choice. At a built site, `i` opens a 32-character
+command buffer: exact `connect` plus Escape or Enter stages a well, and Enter at
+a ring commits a persistent directed arrow from the well; ring Escape retries
+and Normal Escape or blur cancels. In survival, `i` types construction commands
+and Space `f` opens a finder for built names, types, IDs, Rally and the enemy
+gate; movement applies the shared displacement sweep used by later collision.
+The pure core advances linked mana on exact 100 ms ticks and creates up to five ordered
 stationary imps per ring. The browser forwards monotonic frame time into that
 core, suspends without catch-up while the tab is hidden, and Normal `p` toggles
 manual pause; the HUD shows mana, link endpoints, produced imps out of five,

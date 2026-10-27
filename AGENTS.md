@@ -8,8 +8,9 @@ Next-pass authority: `docs/plans/CURSOR_SURVIVAL.md`; execution plan:
 `docs/plans/CURSOR_SURVIVAL_EXECUTION.md`. Started; unit 1.1 added the rules
 profiles and empty survival scenario, unit 1.2 added dynamic building
 identity/placement and the fixed enemy gate, unit 2.1 added deterministic
-survival terrain, rendered grass and the relative row gutter, and unit 2.2 added
-typed survival construction, names, connections and the shared rally command;
+survival terrain, rendered grass and the relative row gutter, unit 2.2 added
+typed survival construction, names, connections and the shared rally command,
+and unit 2.3 added the building finder and made survival the browser default;
 later features remain pending.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.

@@ -25,11 +25,12 @@ building finder, free placement, shared rally, moving allies, fixed-gate hostile
 waves, collision and cursor health.
 [Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has nine units. Started with the
 rules-profile boundary and empty survival scenario; defaults are planner choices
-under the author's request. Features below remain the currently running first
-playable until their units land; `?rules=first-playable` selects it explicitly
-and `?rules=survival` selects the survival world with its deterministic terrain,
-grass, relative row gutter, typed construction, names, connections and shared
-rally command. The live map is [survival coverage](survival-coverage.md).
+under the author's request. The browser now defaults to survival with its
+deterministic terrain, grass, relative row gutter, typed construction, names,
+connections, shared rally command and building finder.
+`?rules=first-playable` selects the historical playable explicitly. Later troop,
+wave and combat features remain pending. The live map is
+[survival coverage](survival-coverage.md).
 
 ## What runs now
 
@@ -39,14 +40,15 @@ the pure TypeScript navigation API without computing destinations in the
 browser, and the HUD reports pending counts, find and go prefixes. The supported
 motions are counted `h j k l`, `w b e W B E`, `0 ^ $`, `gg G` and `f F`; Escape
 and browser blur cancel a stranded prefix. The original 40x20 navigation
-contract remains checked as a compatibility fixture. Space then `f` builds a
-well or ring at a targeted site; at a built site, `i` accepts the exact `connect`
-command to stage a well source and commit a directed arrow at a ring. Linked
-wells feed rings on exact 100 ms ticks, rings summon five ordered stationary
-imps, Normal `p` pauses, and hidden tabs suspend without catch-up. The HUD shows
-resources, link endpoints, production, mode and simulation time. Bun serves and
-bundles; Nix pins tools; Bun and Chromium check contract, core and
-development/production browser behavior.
+contract remains checked as a compatibility fixture. The historical
+first-playable profile keeps Space `f` building and `i` `connect`; the default
+survival profile types construction with `i`, opens the building finder with
+Space `f`, and sends every cursor displacement, including finder jumps, through
+one shared sweep. Linked wells feed rings on exact 100 ms ticks, rings summon
+five ordered stationary imps, Normal `p` pauses, and hidden tabs suspend without
+catch-up. The HUD shows resources, link endpoints, production, mode and
+simulation time. Bun serves and bundles; Nix pins tools; Bun and Chromium check
+contract, core and development/production browser behavior.
 
 ## Completion
 

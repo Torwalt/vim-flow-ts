@@ -28,7 +28,7 @@ const linkSelectedRgb = [143, 211, 192];
 
 async function open(page: Page, live = false): Promise<void> {
   await page.setViewportSize({ width: 1000, height: 700 });
-  await page.goto(live ? "/" : "/?clock=manual");
+  await page.goto(live ? "/?rules=first-playable" : "/?clock=manual&rules=first-playable");
   await expect(page.locator("#world")).toHaveAttribute("data-ready", "true");
   await page.locator("#world").click({ position: { x: 8, y: 8 } });
 }
