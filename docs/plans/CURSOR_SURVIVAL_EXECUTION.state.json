@@ -99,6 +99,31 @@
         "reasoning": 25086,
         "cache_read": 5708544
       }
+    },
+    "2.3": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:19:31+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "63450e185e25cbf6aa56ba3989cd1ea0961c0087",
+      "commits": [
+        "52c9ce11edc161033121bb9922496ba2731e1ae5 Add survival building finder and default browser play"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `52c9ce1` adds the survival building finder and makes survival the browser default. Normal Space `f` opens Finder with an empty query, lists built buildings plus `Rally | rally | rally` and `Enemy gate | spawn | gate`, and matches an ASCII-case-insensitive subsequence of `name type ID`. Up/Down clamp, query edits reset selection, Enter jumps to the selected building centre, rally cell or gate centre, no-result Enter stays open with a notice, and Escape closes without moving. Jumps preserve a staged well source, so `i connect Enter` still links after navigating. The browser renders a readable finder panel and HUD entries, handles real arrow/Enter keys, and ignores navigation bindings while Finder is open. Survival's normal and finder cursor displacements now share one sweep helper, ready for enemy collision. Historical browser suites explicitly request `?rules=first-playable`; default page load is survival.\n\n**Landmark drift** — Finder types and helpers added beside Insert/Name in `src/core/world.ts`; `leaderStep` branches to Finder for survival. `Observation` gained `finder: { query, selection, entries } | null`; `FinderEntry`, `FinderObservation` are exported through `src/core/game.ts`. `survivalDisplacement` lives near the mode steps and is used by both finder Enter and ordinary survival navigation. `src/web/main.ts` flips the default profile, adds `drawFinder`, finder HUD text and datasets. All historical browser suites now route explicitly through `?rules=first-playable`.\n\n**Deviations from the work order** — Escape from Finder preserves a staged source; only blur/hidden clear it, following §5's explicit separation. The shared displacement sweep is applied to all survival cursor movement now, not just finder jumps, so §7 has one entry point already. A rules query other than `first-playable` (including absent or invalid) selects survival. The finder panel scrolls its visible window around the selection when entries exceed the viewport; selection still spans all entries.\n\n**What the next session must know** — `hostileAt` inside `survivalDisplacement` currently delegates to `impsOf`, which still returns no survival imps; §6/§7 must feed living hostile troops (with factions) into it. The blocked-jump branch already closes Finder at the last safe cell with a `Blocked by hostile at x,y` notice but is untested because enemies do not exist yet. `finderOrigin` is captured and reset but not otherwise consumed; `game.snapshot` does not retain an active Finder, matching Insert/Name behavior. Finder sorts special destinations among buildings by name, so `Enemy gate` precedes `Foo` and `Rally` follows it. `just verify` and `just test` pass at HEAD (258 core tests, 100 browser tests).\n\n**Open problems** — None blocking. Blocked finder movement and hostile notices await the troop state. Combat, waves, death and the remaining §7/§8 UI are still absent as planned.",
+      "session_id": "ses_e82f0707cffeDoJWu7nAck2Jj0",
+      "cost_usd": 0.07056153000000001,
+      "harness": "opencode",
+      "elapsed_s": 439,
+      "session_s": 407,
+      "verify_s": 30,
+      "test_s": 2,
+      "tokens": {
+        "input": 219151,
+        "output": 20572,
+        "reasoning": 16614,
+        "cache_read": 5125760
+      }
     }
   }
 }
