@@ -124,6 +124,31 @@
         "reasoning": 16614,
         "cache_read": 5125760
       }
+    },
+    "3.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:30:34+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "e4430c8f01cad9e6e91914c3705066dab2819e7e",
+      "commits": [
+        "f185dfe75f2107bbf0c26f77c8e79817381d05d3 Add living survival troops and simultaneous combat"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `f185dfe` adds living survival troops, validated troop\nscenarios/snapshots, replacement production and simultaneous combat. Survival\ntroops carry stable IDs, faction, origin ring/serial, position, HP and\n`nextAttackTick`. Allies use `ring#serial` IDs (`b001#1`, ...); enemies use a\nvalidated explicit ID that cannot take the allied form. Observation/snapshot add\n`troops`, `cursorHp`, `kills`, and survival rings expose total `produced` plus\n`living`. Exported tuning constants are `ALLY_HP`, `ENEMY_HP`, `CURSOR_MAX_HP`\nand `ATTACK_COOLDOWN`. Survival economy now walks dynamic IDs (the old code only\nwalked fixed sites): generate, transfer in ID order, then summon. A ring with\n1000 mana and fewer than five living allies spends 1000 at its first patch-row-6\nexit free of troops/cursor and allocates the next serial; all-blocked spends\nnothing. Combat uses a pre-damage snapshot: each ready troop selects one adjacent\nopponent by lowest HP then lexical ID, enemies prefer adjacent allies before the\ncursor, all damage applies together (mutual kills), dead troops are removed, and\nonly actual attackers set `nextAttackTick=tick+10`. Newborns get `tick+10`.\nTests cover production exits/replacements, damaged troops, origin-ring counts,\ncooldowns, lowest-HP/ID selection, mutual kills, cursor damage, pause/partition\ndeterminism, snapshot round-trip and rejected setup.\n\n**Landmark drift** — `generate`/`transfer`/`summon` became ordered helpers, with\n`tickWorld` owning per-tick state and `summonSurvival`/`combatPhase` beside it.\n`impsOf` still returns legacy ordered slot imps only, as required. `placeSurvival`\nnow checks `state.troops` instead of `impsOf` when blocking footprints.\n\n**Deviations from the work order** — I implemented cursor damage during the\ncombat tick phase (authority §6, enemies choose allies before cursor) but not the\n§7 HP-0 game-over/restart boundary, which remains unit 3.2. Consequently\n`cursorHp` can reach 0 without freezing or restarting in this unit. Survival\nwells now generate/transfer because production needs a funded ring; the browser\nconstruction test's expected well mana changed from 0 to two ticks of\n`WELL_GENERATION`, recorded in survival coverage. Survival ring `produced` is now\nan unbounded safe integer (total serials) while legacy rings keep the five cap.\n\n**What the next session must know** — Troops live in `state.troops` as a\ndiscriminated union; combat sorts by ID, but `snapshot` also sorts troops for a\nstable shape. Scenario allies must set `serial \u003c= ring.produced`; enemies cannot\nuse `ring#serial` IDs to avoid future spawn collisions. `survivalDisplacement`\nstill calls `impsOf`, so cursor collision remains unwired exactly as the unit\nrequires. Field composition draws all survival troops as `i` after buildings.\n`game.observe` keeps `impCount`/`imps` historical, so survival population is read\nfrom `troops` and ring `living`. The `main.ts` survival ring HUD now shows\nliving/total. Existing survival scenarios with ring `produced` still round-trip;\nthe added `living` field is observation-only and is not in snapshots.\n\n**Open problems** — None blocking. §7 waves, hostile/allied movement, cursor\ncollision, game over and restart are still absent by design. Dead-ally population\nreplacement is tested; enemy waves must reuse these cooldown/combat rules rather\nthan adding a second combat path.",
+      "session_id": "ses_e82e9bd2effeo48E7TjS0iFLyJ",
+      "cost_usd": 0.10696258800000001,
+      "harness": "opencode",
+      "elapsed_s": 662,
+      "session_s": 629,
+      "verify_s": 31,
+      "test_s": 2,
+      "tokens": {
+        "input": 295578,
+        "output": 24984,
+        "reasoning": 36332,
+        "cache_read": 8612096
+      }
     }
   }
 }
