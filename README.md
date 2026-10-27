@@ -5,9 +5,13 @@ comparison is paused. Continue this game here; reconsider a Bend rewrite after
 the design stabilizes. Historical measurements remain in the linked notes.
 
 Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
-[nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), written but
-not started. Terrain, relative row numbers, typed/named construction, building
-finder, free placement, shared rally and fixed-gate enemy waves are planned; the first playable described below runs now.
+[nine-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), started. The
+rules-profile boundary and an empty survival scenario exist; terrain, relative
+row numbers, typed/named construction, building finder, free placement, shared
+rally and fixed-gate enemy waves remain planned. The first playable described
+below still runs by default; `?rules=first-playable` selects it explicitly and
+`?rules=survival` selects the empty survival world. See
+[survival coverage](docs/survival-coverage.md).
 
 ```sh
 nix develop

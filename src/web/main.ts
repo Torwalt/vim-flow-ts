@@ -6,6 +6,7 @@ import {
   game,
   type GameEvent,
   type Observation,
+  type RulesProfile,
   type World,
 } from "../core/game";
 import {
@@ -71,10 +72,13 @@ declare global {
   }
 }
 
-const manualClock = new URLSearchParams(window.location.search).get("clock") === "manual";
+const parameters = new URLSearchParams(window.location.search);
+const manualClock = parameters.get("clock") === "manual";
+const requestedRules = parameters.get("rules");
+const initialRules: RulesProfile = requestedRules === "survival" ? "survival" : "first-playable";
 let manualNow = 0;
 const clock = new ElapsedClock(manualClock ? 0 : null);
-let state: World = game.initial();
+let state: World = game.initial({ rules: initialRules });
 let camera: Camera = { x: 0, y: 0 };
 let viewport: Viewport = { columns: 1, rows: 1 };
 let composing = false;
@@ -303,6 +307,7 @@ function render(): void {
   canvas.dataset.suspended = String(observation.suspended);
   canvas.dataset.elapsedTicks = String(observation.elapsedTicks);
   canvas.dataset.remainderMs = String(observation.remainderMs);
+  canvas.dataset.rules = game.snapshot(state).rules ?? "first-playable";
   canvas.dataset.ready = "true";
 }
 

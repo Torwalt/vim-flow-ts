@@ -5,7 +5,8 @@ A small Vim-controlled ASCII RTS, developed in TypeScript/Bun. Read
 The Bend/TypeScript comparison is paused; preserve its historical evidence.
 The completed first-playable authority is `docs/first-playable.md`.
 Next-pass authority: `docs/plans/CURSOR_SURVIVAL.md`; execution plan:
-`docs/plans/CURSOR_SURVIVAL_EXECUTION.md`. It is written, not started.
+`docs/plans/CURSOR_SURVIVAL_EXECUTION.md`. Started; unit 1.1 added the rules
+profiles and empty survival scenario, later features remain pending.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as

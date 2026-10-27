@@ -11,10 +11,17 @@ export const SITE_IDS = [
   "a01", "a02", "a03", "a04", "b01", "b02", "z01", "z02",
 ] as const;
 
+export const RULES_PROFILES = ["first-playable", "survival"] as const;
+
+export type RulesProfile = (typeof RULES_PROFILES)[number];
 export type SiteId = (typeof SITE_IDS)[number];
 export type SiteKind = "empty" | "well" | "ring";
 export type ImpSlot = 1 | 2 | 3 | 4 | 5;
 export type MenuSelection = "well" | "ring";
+
+export interface InitialOptions {
+  readonly rules?: RulesProfile;
+}
 
 export interface Cursor {
   readonly x: number;
@@ -95,6 +102,7 @@ export interface BuildingSetup {
 }
 
 export interface Scenario {
+  readonly rules?: RulesProfile;
   readonly navigationOnly?: boolean;
   readonly rows?: Readonly<Record<string, string>>;
   readonly cursor?: Cursor;
@@ -122,6 +130,7 @@ type InsertMode = { readonly $: "Insert"; readonly count: 0; readonly site: Site
 type GameMode = Mode | LeaderMode | BuildMode | InsertMode;
 
 interface InternalWorld {
+  readonly rules: RulesProfile;
   readonly navigationOnly: boolean;
   readonly cursor: Cursor;
   readonly mode: GameMode;
@@ -222,6 +231,12 @@ function fail(message: string): never {
   throw new Error(`Invalid world scenario: ${message}`);
 }
 
+function rulesProfile(value: unknown, label: string): RulesProfile {
+  if (value === undefined) return "first-playable";
+  if (value === "first-playable" || value === "survival") return value;
+  fail(`${label} must be "first-playable" or "survival"`);
+}
+
 function integer(value: unknown, label: string, min: number, max: number): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
     fail(`${label} must be an integer in ${min}..${max}`);
@@ -305,13 +320,17 @@ function parseScenario(spec: unknown): InternalWorld {
   if (spec === undefined) spec = {};
   if (!isRecord(spec)) fail("scenario must be an object");
   const allowed = new Set([
-    "navigationOnly", "rows", "cursor", "buildings", "pendingSource",
+    "rules", "navigationOnly", "rows", "cursor", "buildings", "pendingSource",
     "manualPaused", "suspended", "elapsedTicks", "remainderMs",
   ]);
   for (const key of Object.keys(spec)) if (!allowed.has(key)) fail(`unknown scenario field ${key}`);
+  const rules = rulesProfile(spec.rules, "rules");
   if (spec.navigationOnly !== undefined && typeof spec.navigationOnly !== "boolean") fail("navigationOnly must be boolean");
   const navigationOnly = spec.navigationOnly === true;
   if (!navigationOnly && spec.rows !== undefined) fail("rows require navigationOnly");
+  if (rules === "survival" && spec.pendingSource !== undefined && spec.pendingSource !== null) {
+    fail("survival scenarios have no fixed sites");
+  }
   const navRows = navigationOnly && spec.rows !== undefined ? rows(spec.rows) : navigationOnly ? Array.from({ length: WORLD_HEIGHT }, () => " ".repeat(WORLD_WIDTH)) : null;
   const position = spec.cursor === undefined ? { ...INITIAL_CURSOR } : cursor(spec.cursor);
   const buildings = new Map<SiteId, Building>();
@@ -323,6 +342,7 @@ function parseScenario(spec: unknown): InternalWorld {
       buildings.set(parsed.site, parsed.building);
     }
   }
+  if (rules === "survival" && buildings.size > 0) fail("survival scenarios have no fixed sites or buildings");
   if (navigationOnly && buildings.size > 0) fail("navigationOnly has no sites or buildings");
   for (const [site, building] of buildings) {
     if (building.kind === "well" && building.link !== null) {
@@ -342,6 +362,7 @@ function parseScenario(spec: unknown): InternalWorld {
   const elapsedTicks = spec.elapsedTicks === undefined ? 0 : safeInteger(spec.elapsedTicks, "elapsedTicks");
   const remainderMs = spec.remainderMs === undefined ? 0 : integer(spec.remainderMs, "remainderMs", 0, 99);
   return {
+    rules,
     navigationOnly,
     cursor: position,
     mode: normalMode(),
@@ -408,12 +429,14 @@ function drawBuilding(cells: string[], site: SiteDefinition, building: Building 
 function compose(world: InternalWorld): string {
   if (world.navRows !== null) return world.navRows.join("");
   const cells = BASE.slice();
-  for (const site of SITE_DEFINITIONS) drawBuilding(cells, site, world.buildings.get(site.id));
-  for (const site of SITE_DEFINITIONS) {
-    const building = world.buildings.get(site.id);
-    if (building?.kind !== "ring") continue;
-    for (const slot of IMP_SLOTS.slice(0, building.produced)) {
-      put(cells, site.x + RALLY_OFFSET[slot], site.y + RALLY_ROW, "i");
+  if (world.rules === "first-playable") {
+    for (const site of SITE_DEFINITIONS) drawBuilding(cells, site, world.buildings.get(site.id));
+    for (const site of SITE_DEFINITIONS) {
+      const building = world.buildings.get(site.id);
+      if (building?.kind !== "ring") continue;
+      for (const slot of IMP_SLOTS.slice(0, building.produced)) {
+        put(cells, site.x + RALLY_OFFSET[slot], site.y + RALLY_ROW, "i");
+      }
     }
   }
   return cells.join("");
@@ -428,7 +451,7 @@ function text(world: World): string {
 }
 
 function impsOf(world: InternalWorld): readonly Imp[] {
-  if (world.navigationOnly) return [];
+  if (world.navigationOnly || world.rules !== "first-playable") return [];
   const result: Imp[] = [];
   for (const site of SITE_DEFINITIONS) {
     const building = world.buildings.get(site.id);
@@ -440,8 +463,10 @@ function impsOf(world: InternalWorld): readonly Imp[] {
   return result;
 }
 
-export function initial(): World {
-  return construct(parseScenario({}));
+export function initial(options: unknown = {}): World {
+  if (!isRecord(options)) fail("initial options must be an object");
+  for (const key of Object.keys(options)) if (key !== "rules") fail(`unknown initial option ${key}`);
+  return construct(parseScenario({ rules: rulesProfile(options.rules, "rules") }));
 }
 
 export function scenario(spec: unknown = {}): World {
@@ -450,12 +475,14 @@ export function scenario(spec: unknown = {}): World {
 
 export function snapshot(world: World): Scenario {
   const state = data(world);
+  const profile: Pick<Scenario, "rules"> = state.rules === "survival" ? { rules: "survival" } : {};
   if (state.navigationOnly) {
     const rows: Record<string, string> = {};
     for (const [y, row] of (state.navRows ?? []).entries()) {
       if (row.trim() !== "") rows[String(y)] = row;
     }
     return {
+      ...profile,
       navigationOnly: true,
       cursor: { ...state.cursor },
       rows,
@@ -471,6 +498,7 @@ export function snapshot(world: World): Scenario {
       : { site: site.id, kind: "ring", mana: building.mana, produced: building.produced });
   }
   return {
+    ...profile,
     cursor: { ...state.cursor },
     buildings,
     ...(state.pendingSource === null ? {} : { pendingSource: state.pendingSource }),
@@ -490,7 +518,7 @@ function clockSetup(state: InternalWorld): Pick<Scenario, "manualPaused" | "susp
 export function build(world: World, site: SiteId, kind: "well" | "ring"): World {
   const state = data(world);
   if (!isSiteId(site) || (kind !== "well" && kind !== "ring")) return world;
-  if (state.navigationOnly || state.buildings.has(site)) return world;
+  if (state.rules !== "first-playable" || state.navigationOnly || state.buildings.has(site)) return world;
   const buildings = new Map(state.buildings);
   buildings.set(site, kind === "well"
     ? { kind: "well", mana: 0, link: null }
@@ -500,7 +528,7 @@ export function build(world: World, site: SiteId, kind: "well" | "ring"): World 
 
 export function link(world: World, source: SiteId, target: SiteId): World {
   const state = data(world);
-  if (!isSiteId(source) || !isSiteId(target) || state.navigationOnly) return world;
+  if (!isSiteId(source) || !isSiteId(target) || state.rules !== "first-playable" || state.navigationOnly) return world;
   const well = state.buildings.get(source);
   const ring = state.buildings.get(target);
   if (!well || well.kind !== "well" || !ring || ring.kind !== "ring") return world;
@@ -832,7 +860,7 @@ export function observe(world: World): Observation {
   let buildingCount = 0;
   let impCount = 0;
   let pendingFrom: Cursor | null = null;
-  if (!state.navigationOnly) {
+  if (!state.navigationOnly && state.rules === "first-playable") {
     for (const site of SITE_DEFINITIONS) {
       const building = state.buildings.get(site.id);
       if (!building) {
@@ -875,7 +903,7 @@ export function observe(world: World): Observation {
     suspended: state.suspended,
     elapsedTicks: state.elapsedTicks,
     remainderMs: state.remainderMs,
-    siteCount: state.navigationOnly ? 0 : SITE_DEFINITIONS.length,
+    siteCount: state.navigationOnly || state.rules !== "first-playable" ? 0 : SITE_DEFINITIONS.length,
     buildingCount,
     impCount,
     siteAtCursor: siteAt(world, state.cursor.x, state.cursor.y),
@@ -886,7 +914,8 @@ export function observe(world: World): Observation {
 }
 
 export function siteAt(world: World, x: number, y: number): SiteId | null {
-  if (data(world).navigationOnly || !Number.isInteger(x) || !Number.isInteger(y)) return null;
+  const state = data(world);
+  if (state.rules !== "first-playable" || state.navigationOnly || !Number.isInteger(x) || !Number.isInteger(y)) return null;
   for (const site of SITE_DEFINITIONS) {
     if (x >= site.x && x < site.x + SITE_WIDTH && y >= site.y && y < site.y + SITE_HEIGHT) return site.id;
   }
@@ -905,7 +934,7 @@ export function field(world: World): GlyphField {
 export function preview(world: World, site: SiteId, kind: "well" | "ring"): GlyphField {
   const state = data(world);
   if (!isSiteId(site) || (kind !== "well" && kind !== "ring")) return field(world);
-  if (state.navigationOnly || state.buildings.has(site)) return field(world);
+  if (state.rules !== "first-playable" || state.navigationOnly || state.buildings.has(site)) return field(world);
   const definition = SITE_DEFINITIONS.find(candidate => candidate.id === site);
   if (!definition) return field(world);
   const cells = Array.from(text(world));

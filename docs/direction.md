@@ -23,9 +23,12 @@ faint rendered grass over logical whitespace, real terrain landmarks, relative
 row numbers, typed/autocompleted construction with optional names, Space f
 building finder, free placement, shared rally, moving allies, fixed-gate hostile
 waves, collision and cursor health.
-[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has nine units. Written, not
-started; defaults are planner choices under the author's request. Features below
-remain the currently running first playable until those units land.
+[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has nine units. Started with the
+rules-profile boundary and empty survival scenario; defaults are planner choices
+under the author's request. Features below remain the currently running first
+playable until their units land; `?rules=first-playable` selects it explicitly
+and `?rules=survival` selects the empty survival world. The live map is
+[survival coverage](survival-coverage.md).
 
 ## What runs now
 
