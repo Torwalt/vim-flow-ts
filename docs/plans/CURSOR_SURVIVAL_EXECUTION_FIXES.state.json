@@ -24,6 +24,31 @@
         "reasoning": 11466,
         "cache_read": 1467648
       }
+    },
+    "1.2": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:40:58+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "944165d02dd6c30b74ad891e3ab5c00a2b11c007",
+      "commits": [
+        "99948966cdc87cd963fbc8c1b987615eb93b4f1c Reject over-cap living troops in survival scenarios"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.2 — Enforce living population caps in survival scenarios\n\n**What landed**\n\n`9994896 Reject over-cap living troops in survival scenarios` makes\n`parseTroops` count supplied allies by origin ring and enemies as it parses.\nMore than `IMP_CAP` living allies for one ring or more than `ENEMY_CAP` living\nenemies now rejects scenario construction; supplied troops are never trimmed.\nExactly-at-cap setups, five allies from each of multiple rings, and a\nmillion-produced ring with five living allies are accepted and round-trip.\n`tests/core/survival-combat.test.ts` and `tests/core/survival-waves.test.ts`\nhold the new regression examples; `docs/survival-coverage.md` records them and\nthe construction-time cap contract.\n\n**Landmark drift**\n\nThe work order's `src/core/world.ts:710` still points at `parseTroops`; the\npopulation counters added eight lines, so guards and later movement code shifted\nslightly. `survivalTroopSetup` is unchanged. Production and wave guards remain\nat their previous locations and were not modified.\n\n**Deviations from the work order**\n\nNone functionally. The enemy regression uses the work order's `(20+i,20)` cells\nand IDs `n0..n128`; the ally large-produced example uses the existing `ring`\nhelper with `produced: 1_000_000`. Checks count while parsing rather than in a\nsecond pass, so an over-cap list fails at the offending troop with a descriptive\nmessage. No public interface changed.\n\n**What the next session must know**\n\n- Validation is per origin ring, not per position or `produced`; serials still\n  only need to be positive and not exceed `produced`.\n- The legacy five-produced cap in `buildingSetup` remains separate and intact.\n- `direnv exec . just verify` and `direnv exec . just test` both passed:\n  294 core tests, 106 browser tests across both projects, typecheck, contract\n  checks, first-playable completion and benchpress lint. No flake change, so\n  `just check-nix` was not run.\n- The worktree is clean after the commit.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e82a0e2a3ffeTP05tVWS1Njmv6",
+      "cost_usd": 0.015108174,
+      "harness": "opencode",
+      "elapsed_s": 113,
+      "session_s": 94,
+      "verify_s": 17,
+      "test_s": 2,
+      "tokens": {
+        "input": 43205,
+        "output": 4768,
+        "reasoning": 3108,
+        "cache_read": 1300608
+      }
     }
   }
 }
