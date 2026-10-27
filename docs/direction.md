@@ -9,9 +9,22 @@ Construction is free/immediate; visible time continues while typing/using menus.
 The full-window world viewport, free construction, typed directed connections
 and the linked mana/imp economy run with visible monotonic time.
 
-The shared [game authority](first-playable.md) pins behavior and defaults; the
-[execution plan](plans/FIRST_PLAYABLE_EXECUTION.md) carries the implementation
-record until Ploopy closes it.
+The completed [first-playable authority](first-playable.md) preserves the
+measured behavior. Its execution plan has been closed and landed.
+
+## Next pass (2026-10-27)
+
+The author paused independent Bend/TypeScript comparison. Continue the small
+game in TypeScript; reconsider a Bend rewrite after playtesting stabilizes rules
+and the codebase is substantial enough. No ongoing parity obligation.
+
+[Cursor survival](plans/CURSOR_SURVIVAL.md) specifies the next pass:
+faint rendered grass over logical whitespace, real terrain landmarks, relative
+row numbers, typed/autocompleted construction with optional names, Space f
+building finder, hostile imp waves, allied guards, collision and cursor health.
+[Execution](plans/CURSOR_SURVIVAL_EXECUTION.md) has seven units. Written, not
+started; defaults are planner choices under the author's request. Features below
+remain the currently running first playable until those units land.
 
 ## What runs now
 
@@ -32,7 +45,6 @@ development/production browser behavior.
 
 ## Completion
 
-The [first-playable plan](plans/FIRST_PLAYABLE_EXECUTION.md) is complete in this
-repository: the full 18-property, 53-case corpus and the original 40×20
+The first-playable plan is complete and landed in this repository: the full 18-property, 53-case corpus and the original 40×20
 navigation contract pass. `just first-playable-complete` executes the mapped
 core and browser suites and checks the active coverage map.

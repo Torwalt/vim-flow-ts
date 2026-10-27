@@ -1,10 +1,11 @@
 # vim-flow-ts
 
-The ordinary TypeScript/Bun comparison arm of vim-flow. Read docs/direction.md
-and ../notes/zettelkasten/vim-game-bend-main.md. Navigation is implemented.
-The comparison protocol and execution evidence live in that note's index.
-The shared game authority is `docs/first-playable.md`; the active implementation
-plan is `docs/plans/FIRST_PLAYABLE_EXECUTION.md`.
+A small Vim-controlled ASCII RTS, developed in TypeScript/Bun. Read
+`docs/direction.md` and `../notes/zettelkasten/vim-game-bend-main.md`.
+The Bend/TypeScript comparison is paused; preserve its historical evidence.
+The completed first-playable authority is `docs/first-playable.md`.
+Next-pass authority: `docs/plans/CURSOR_SURVIVAL.md`; execution plan:
+`docs/plans/CURSOR_SURVIVAL_EXECUTION.md`. It is written, not started.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as
@@ -21,5 +22,5 @@ plan is `docs/plans/FIRST_PLAYABLE_EXECUTION.md`.
 - Keep design questions and work in `docs/workbench/` using benchpress.
   `NEXT.md` is the author's order. Run `benchpress lint`.
 - Preserve configured Git identity. Do not add AI attribution to commits.
-- Do not read or port the completed sibling implementation. This experiment
-  measures implementation from the supplied specification, not translation.
+- Do not read or port the completed sibling implementation. The comparison is paused;
+  this pass develops TypeScript from its own authority.

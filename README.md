@@ -1,9 +1,13 @@
 # vim-flow-ts
 
-The ordinary TypeScript/Bun arm of [vim-flow](https://github.com/Torwalt/vim-flow),
-comparing AI code quality and total token/iteration cost with a law-and-proof
-workflow. This is an independent repository, owned by the personal GitHub user
-Torwalt. It starts from the common baseline, not the completed implementation.
+A small Vim-controlled ASCII RTS in TypeScript/Bun. The independent Bend/TS
+comparison is paused. Continue this game here; reconsider a Bend rewrite after
+the design stabilizes. Historical measurements remain in the linked notes.
+
+Next pass: [cursor survival design](docs/plans/CURSOR_SURVIVAL.md) and
+[seven-unit Ploopy plan](docs/plans/CURSOR_SURVIVAL_EXECUTION.md), written but
+not started. Terrain, relative row numbers, typed/named construction, building
+finder and enemy waves are planned; the first playable described below runs now.
 
 ```sh
 nix develop
@@ -56,7 +60,7 @@ On macOS install Playwright Chromium once; Linux uses the flake's Chromium.
 ## First playable
 
 The shared [first-playable game authority](docs/first-playable.md) is implemented
-by the [Ploopy execution plan](docs/plans/FIRST_PLAYABLE_EXECUTION.md): the
+by the completed and landed first-playable plan: the
 full-window 240×160 world, camera, free keyboard construction, typed directed
 connections, linked mana, five ordered stationary imps per ring, visible
 monotonic time, manual pause and hidden suspension all run in development and
