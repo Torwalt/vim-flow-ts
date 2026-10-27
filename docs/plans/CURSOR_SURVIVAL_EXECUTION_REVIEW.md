@@ -29,8 +29,8 @@ the fix plan only when necessary.
 ### 1.1 Review the branch against the plan
 
 Review: direct
-Agent: claude
-Model: opus
+Agent: codex
+Model: gpt-6.1-sol
 Effort: high
 
 **Goal:** evidence checked, duplicates merged, required fixes separated from
