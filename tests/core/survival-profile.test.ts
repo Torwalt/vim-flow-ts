@@ -29,7 +29,7 @@ test("survival starts without fixed sites or buildings and keeps the initial cur
   expect(observation.imps).toEqual([]);
   expect(observation.links).toEqual([]);
   expect(game.siteAt(state, 10, 10)).toBeNull();
-  expect(game.glyphAt(state, 8, 8)).toBe(" ");
+  expect(game.glyphAt(state, 8, 8)).toBe("^");
   expect(game.field(state).text).toHaveLength(240 * 160);
   expect(game.field(state)).not.toEqual(game.field(game.initial()));
 });

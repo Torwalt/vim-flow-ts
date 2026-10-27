@@ -2,8 +2,9 @@
 
 Authority: [Cursor survival](plans/CURSOR_SURVIVAL.md). This map covers the
 rules-profile boundary, empty survival scenario, dynamic building identity,
-placement and the fixed gate. Clauses owned by later units are marked pending;
-they are not claimed as implemented.
+placement, the fixed gate, deterministic terrain and the relative row gutter.
+Clauses owned by later units are marked pending; they are not claimed as
+implemented.
 
 Status values: **implemented**, **preserved** (historical behavior kept), and
 **pending** (named execution unit owns it).
@@ -22,9 +23,9 @@ Status values: **implemented**, **preserved** (historical behavior kept), and
 
 ## Authority §§3-8 - feature map
 
-| Section | Expected exported operations | Evidence to add | Owner | Status |
+| Section | Expected exported operations | Evidence | Owner | Status |
 | --- | --- | --- | --- | --- |
-| §3 terrain, landmarks, grass, gutter and relative row numbers | `game.field`, `game.glyphAt`, `game.dispatch`; web `visibleCells`, `followCamera`, `render` | core terrain/camera tests and browser pixel/text tests | 2.1 | pending |
+| §3 terrain, landmarks, grass, gutter and relative row numbers | `game.field`, `game.glyphAt`, `game.dispatch`; web `visibleCells`, `followCamera`, `gutterLabel`, `render` | `tests/core/survival-terrain.test.ts`, `tests/browser/survival-terrain.spec.ts` | implemented |
 | §4 dynamic building identity, cursor-centred 11x7 placement, overlap/gate/edge validation, 32-building cap and dynamic links | `game.place`, `game.link`, `game.scenario`, `game.snapshot`, `game.observe`, `game.siteAt` | `tests/core/survival-buildings.test.ts` | implemented |
 | §4 typed Insert construction, autocomplete, names, shared rally commands and connect through input | `game.dispatch`, `game.observe`, `game.snapshot` | construction/connection core and real-key browser suites | 2.2 | pending |
 | §5 building finder, query order and collision-aware shared displacement entry point | `game.dispatch`, `game.observe`; web render/key handling | finder core and browser suites; `?rules=first-playable` retained for historical suites | 2.3 | pending |
@@ -64,7 +65,7 @@ pending until their units.
 
 ## Survival interface additions
 
-Unit 1.2 adds these public interfaces without changing the historical ones:
+Units 1.2 and 2.1 add these public interfaces without changing the historical ones:
 
 - `game.place(world, center, kind)` places a survival well or ring with an
   `11x7` footprint centred on `(center.x, center.y)`. It returns the input world
@@ -81,22 +82,39 @@ Unit 1.2 adds these public interfaces without changing the historical ones:
 - `game.siteAt` and `observation.siteAtCursor` return a dynamic ID inside a
   survival footprint. `observation.sites` remains the historical fixed-site
   map.
+- Survival `game.field` composes deterministic 3x2 landmark clusters at
+  `(8+24c, 8+16r)` for `c,r=0..9`, skipping the gate reservation. The lake and
+  tree strip keep precedence, and placed buildings clear terrain only inside
+  their own footprint. Blank cells stay literal spaces in the logical field;
+  grass dots exist only in the browser presentation.
+- `src/web/camera.ts` exports `GUTTER_COLUMNS = 4`, `GUTTER_WIDTH = 48`, an
+  optional gutter parameter on `visibleCells`, and `gutterLabel`. Survival
+  subtracts the gutter before viewport/camera math; the historical
+  two-argument call and the first-playable render remain unchanged.
+
+## Test and interface revisions
+
+Unit 2.1 replaces the unit 1.1 assertion that survival `(8,8)` is blank with the
+new deterministic landmark `^`. The historical first-playable field, viewport
+and camera tests keep their original two-argument `visibleCells` and
+no-gutter expectations.
 
 ## Historical browser routing
 
 The intended routing is explicit, not an implicit behavior switch:
 
-- **Now (units 1.1-1.2):** the page still defaults to the first-playable
+- **Now (units 1.1-2.1):** the page still defaults to the first-playable
   profile. `?rules=first-playable` selects that same historical behavior
-  explicitly, and `?rules=survival` selects survival with its gate and any
-  scenario-placed dynamic buildings. Scenario loads through
+  explicitly, and `?rules=survival` selects survival with its gate, deterministic
+  terrain, gutter and any scenario-placed dynamic buildings. Scenario loads through
   `window.__vimFlowTest.load` carry `rules` when they exercise survival.
 - **From unit 2.3:** default play becomes survival. Every historical browser
   suite must then navigate with `?rules=first-playable` and keep its existing
   interactions and assertions. Each such migration is recorded here when it
   lands.
 
-No terrain clusters/grass/gutter, construction input, naming, rally commands,
-finder or combat behavior from §§3-7 is claimed by these units. Dynamic
-buildings are available through the core scenario/placement API, not yet through
-the survival browser UI.
+Survival now draws its deterministic terrain clusters, faint grass and the
+4-cell relative-row gutter. Construction input, naming, rally commands, finder
+and combat behavior from §§4-7 remain unclaimed. Dynamic buildings are available
+through the core scenario/placement API, not yet through the survival browser
+UI.

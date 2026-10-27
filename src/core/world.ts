@@ -547,6 +547,25 @@ function baseCells(): string[] {
 
 const BASE = baseCells();
 
+function drawClusters(cells: string[]): void {
+  for (let c = 0; c < 10; c++) {
+    for (let r = 0; r < 10; r++) {
+      const x = 8 + 24 * c;
+      const y = 8 + 16 * r;
+      const clusterRows = (c + r) % 2 === 0 ? ["^^^", " ^ "] : ["oo ", " o "];
+      const rect = { x, y, width: 3, height: 2 };
+      if (x < 1 || y < 1 || x + 2 > WORLD_WIDTH - 2 || y + 1 > WORLD_HEIGHT - 2) continue;
+      if (overlaps(rect, GATE_RESERVED)) continue;
+      for (const [offsetY, row] of clusterRows.entries()) {
+        for (const [offsetX, glyph] of Array.from(row).entries()) {
+          const index = (y + offsetY) * WORLD_WIDTH + x + offsetX;
+          if (glyph !== " " && cells[index] === " ") cells[index] = glyph;
+        }
+      }
+    }
+  }
+}
+
 function drawBuilding(cells: string[], site: Placement, building: Building | undefined): void {
   for (let y = 0; y < SITE_HEIGHT; y++) {
     for (let x = 0; x < SITE_WIDTH; x++) cells[(site.y + y) * WORLD_WIDTH + site.x + x] = " ";
@@ -586,6 +605,7 @@ function compose(world: InternalWorld): string {
       }
     }
   } else {
+    drawClusters(cells);
     drawGate(cells);
     for (const [id, center] of world.dynamic) {
       drawBuilding(cells, { id, x: center.x - 5, y: center.y - 2 }, world.buildings.get(id));

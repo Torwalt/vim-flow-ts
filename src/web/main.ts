@@ -13,7 +13,9 @@ import {
 import {
   CELL_HEIGHT,
   CELL_WIDTH,
+  GUTTER_WIDTH,
   followCamera,
+  gutterLabel,
   visibleCells,
   type Camera,
   type Viewport,
@@ -23,6 +25,13 @@ import { arrowHead, cellCenter, clipSegment } from "./overlay";
 
 const colors = {
   background: "#111714",
+  ground: "#16241a",
+  grass: "#33452f",
+  tree: "#6f9e5a",
+  rock: "#9aa0a0",
+  water: "#4d7ea8",
+  gutterText: "#5c6b5f",
+  gutterCurrent: "#223126",
   field: "#d9ddcb",
   imp: "#f5c451",
   cursor: "#f5c451",
@@ -59,6 +68,7 @@ const hudSource = document.querySelector<HTMLElement>("#hud-source");
 const hudDraft = document.querySelector<HTMLElement>("#hud-draft");
 const hudNotice = document.querySelector<HTMLElement>("#hud-notice");
 const hudClock = document.querySelector<HTMLElement>("#hud-clock");
+const hudLegend = document.querySelector<HTMLElement>("#hud-legend");
 
 declare global {
   interface Window {
@@ -148,15 +158,53 @@ function clockLabel(observation: Observation): string {
   return `${(observation.elapsedTicks / 10).toFixed(1)}s · ${status}`;
 }
 
+let gutterPixels = 0;
+
 function drawCell(glyph: string, column: number, row: number, color: string): void {
-  const x = column * CELL_WIDTH + CELL_WIDTH / 2;
+  const x = gutterPixels + column * CELL_WIDTH + CELL_WIDTH / 2;
   const y = row * CELL_HEIGHT + CELL_HEIGHT / 2;
   context.fillStyle = color;
   context.fillText(glyph, x, y);
 }
 
 function screenPoint(cell: { readonly x: number; readonly y: number }): { x: number; y: number } {
-  return cellCenter(cell.x - camera.x, cell.y - camera.y, CELL_WIDTH, CELL_HEIGHT);
+  const point = cellCenter(cell.x - camera.x, cell.y - camera.y, CELL_WIDTH, CELL_HEIGHT);
+  return { x: point.x + gutterPixels, y: point.y };
+}
+
+function insideBuilding(observation: Observation, x: number, y: number): boolean {
+  for (const building of observation.buildings) {
+    if (
+      x >= building.center.x - 5 && x <= building.center.x + 5
+      && y >= building.center.y - 2 && y <= building.center.y + 4
+    ) return true;
+  }
+  return false;
+}
+
+function terrainColor(glyph: string, x: number, y: number, observation: Observation): string {
+  if (glyph === "i") return colors.imp;
+  if (glyph === "^") return colors.tree;
+  if (glyph === "~" && !insideBuilding(observation, x, y)) return colors.water;
+  if (glyph === "o" && !insideBuilding(observation, x, y)) return colors.rock;
+  return colors.field;
+}
+
+function drawGutter(observation: Observation, rows: number): void {
+  context.save();
+  context.textAlign = "right";
+  for (let row = 0; row < rows; row++) {
+    const worldRow = camera.y + row;
+    if (worldRow >= WORLD_HEIGHT) break;
+    const current = worldRow === observation.cursor.y;
+    if (current) {
+      context.fillStyle = colors.gutterCurrent;
+      context.fillRect(0, row * CELL_HEIGHT, GUTTER_WIDTH, CELL_HEIGHT);
+    }
+    context.fillStyle = current ? colors.field : colors.gutterText;
+    context.fillText(gutterLabel(worldRow, observation.cursor.y), GUTTER_WIDTH - 4, row * CELL_HEIGHT + CELL_HEIGHT / 2);
+  }
+  context.restore();
 }
 
 function drawLinks(observation: Observation, cssWidth: number, cssHeight: number): void {
@@ -201,7 +249,7 @@ function drawLinks(observation: Observation, cssWidth: number, cssHeight: number
 
 function drawSourceHighlight(observation: Observation): void {
   if (observation.pendingSource === null || observation.pendingFrom === null) return;
-  const left = (observation.pendingFrom.x - 5 - camera.x) * CELL_WIDTH;
+  const left = (observation.pendingFrom.x - 5 - camera.x) * CELL_WIDTH + gutterPixels;
   const top = (observation.pendingFrom.y - 2 - camera.y) * CELL_HEIGHT;
   context.save();
   context.strokeStyle = colors.source;
@@ -223,7 +271,10 @@ function render(): void {
   if (canvas.width !== backingWidth) canvas.width = backingWidth;
   if (canvas.height !== backingHeight) canvas.height = backingHeight;
 
-  viewport = visibleCells(cssWidth, cssHeight);
+  const rules = game.snapshot(state).rules ?? "first-playable";
+  const survival = rules === "survival";
+  gutterPixels = survival ? GUTTER_WIDTH : 0;
+  viewport = visibleCells(cssWidth, cssHeight, gutterPixels);
   camera = followCamera(camera, observation.cursor, viewport, {
     width: WORLD_WIDTH,
     height: WORLD_HEIGHT,
@@ -232,10 +283,17 @@ function render(): void {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.fillStyle = colors.background;
   context.fillRect(0, 0, cssWidth, cssHeight);
+  if (survival) {
+    const columns = Math.max(0, Math.min(viewport.columns, WORLD_WIDTH - camera.x));
+    const rows = Math.max(0, Math.min(viewport.rows, WORLD_HEIGHT - camera.y));
+    context.fillStyle = colors.ground;
+    context.fillRect(GUTTER_WIDTH, 0, columns * CELL_WIDTH, rows * CELL_HEIGHT);
+  }
   context.font = '15px "SFMono-Regular", Consolas, "Liberation Mono", monospace';
   context.textAlign = "center";
   context.textBaseline = "middle";
 
+  if (survival) drawGutter(observation, viewport.rows);
   drawLinks(observation, cssWidth, cssHeight);
 
   const text = game.field(state).text;
@@ -254,8 +312,13 @@ function render(): void {
       if (worldColumn === cursorX && worldRow === cursorY) continue;
       const index = worldRow * WORLD_WIDTH + worldColumn;
       const glyph = text[index] ?? " ";
-      if (glyph === " ") continue;
-      drawCell(glyph, column, row, glyph === "i" ? colors.imp : colors.field);
+      if (glyph === " ") {
+        if (survival) drawCell(".", column, row, colors.grass);
+        continue;
+      }
+      drawCell(glyph, column, row, survival
+        ? terrainColor(glyph, worldColumn, worldRow, observation)
+        : glyph === "i" ? colors.imp : colors.field);
     }
   }
 
@@ -281,7 +344,7 @@ function render(): void {
   const cursorRow = cursorY - camera.y;
   if (cursorColumn >= 0 && cursorColumn < viewport.columns && cursorRow >= 0 && cursorRow < viewport.rows) {
     context.fillStyle = colors.cursor;
-    context.fillRect(cursorColumn * CELL_WIDTH, cursorRow * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT);
+    context.fillRect(gutterPixels + cursorColumn * CELL_WIDTH, cursorRow * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT);
     drawCell(text[cursorY * WORLD_WIDTH + cursorX] ?? " ", cursorColumn, cursorRow, colors.cursorGlyph);
   }
 
@@ -294,6 +357,7 @@ function render(): void {
   setText(hudDraft, `draft ${observation.commandBuffer === "" ? "—" : observation.commandBuffer}`);
   setText(hudNotice, observation.notice);
   setText(hudClock, clockLabel(observation));
+  setText(hudLegend, survival ? "grass . is whitespace" : "");
 
   canvas.dataset.cursorX = String(cursorX);
   canvas.dataset.cursorY = String(cursorY);
@@ -304,6 +368,12 @@ function render(): void {
   canvas.dataset.count = String(observation.count);
   canvas.dataset.cameraX = String(camera.x);
   canvas.dataset.cameraY = String(camera.y);
+  canvas.dataset.gutterWidth = String(gutterPixels);
+  canvas.dataset.gutter = survival
+    ? Array.from({ length: viewport.rows }, (_, row) => gutterLabel(camera.y + row, cursorY))
+      .filter((_, row) => camera.y + row < WORLD_HEIGHT)
+      .join(",")
+    : "";
   canvas.dataset.columns = String(viewport.columns);
   canvas.dataset.rows = String(viewport.rows);
   canvas.dataset.cellWidth = String(CELL_WIDTH);
@@ -324,7 +394,7 @@ function render(): void {
   canvas.dataset.suspended = String(observation.suspended);
   canvas.dataset.elapsedTicks = String(observation.elapsedTicks);
   canvas.dataset.remainderMs = String(observation.remainderMs);
-  canvas.dataset.rules = game.snapshot(state).rules ?? "first-playable";
+  canvas.dataset.rules = rules;
   canvas.dataset.ready = "true";
 }
 

@@ -7,7 +7,9 @@ The completed first-playable authority is `docs/first-playable.md`.
 Next-pass authority: `docs/plans/CURSOR_SURVIVAL.md`; execution plan:
 `docs/plans/CURSOR_SURVIVAL_EXECUTION.md`. Started; unit 1.1 added the rules
 profiles and empty survival scenario, unit 1.2 added dynamic building
-identity/placement and the fixed enemy gate; later features remain pending.
+identity/placement and the fixed enemy gate, and unit 2.1 added deterministic
+survival terrain, rendered grass and the relative row gutter; later features
+remain pending.
 
 - Enter `nix develop`; run `just setup` once, then `just dev`.
 - Keep game rules, Vim interpretation and state transitions in `src/core/` as

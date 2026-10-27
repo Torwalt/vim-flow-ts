@@ -27,7 +27,8 @@ waves, collision and cursor health.
 rules-profile boundary and empty survival scenario; defaults are planner choices
 under the author's request. Features below remain the currently running first
 playable until their units land; `?rules=first-playable` selects it explicitly
-and `?rules=survival` selects the empty survival world. The live map is
+and `?rules=survival` selects the empty survival world with its deterministic
+terrain, grass and relative row gutter. The live map is
 [survival coverage](survival-coverage.md).
 
 ## What runs now

@@ -1,6 +1,8 @@
 export const CELL_WIDTH = 12;
 export const CELL_HEIGHT = 20;
 export const HUD_HEIGHT = 32;
+export const GUTTER_COLUMNS = 4;
+export const GUTTER_WIDTH = GUTTER_COLUMNS * CELL_WIDTH;
 
 const MARGIN_DIVISOR = 5;
 
@@ -19,13 +21,18 @@ export interface Extent {
   readonly height: number;
 }
 
-export function visibleCells(cssWidth: number, cssHeight: number): Viewport {
-  const width = Number.isFinite(cssWidth) ? Math.max(0, cssWidth) : 0;
+export function visibleCells(cssWidth: number, cssHeight: number, gutterWidth = 0): Viewport {
+  const inset = Number.isFinite(gutterWidth) ? Math.max(0, gutterWidth) : 0;
+  const width = Number.isFinite(cssWidth) ? Math.max(0, cssWidth - inset) : 0;
   const height = Number.isFinite(cssHeight) ? Math.max(0, cssHeight) : 0;
   return {
     columns: Math.max(1, Math.floor(width / CELL_WIDTH)),
     rows: Math.max(1, Math.floor(height / CELL_HEIGHT)),
   };
+}
+
+export function gutterLabel(worldRow: number, cursorRow: number): string {
+  return String(worldRow === cursorRow ? worldRow + 1 : Math.abs(worldRow - cursorRow));
 }
 
 function followAxis(origin: number, cursor: number, visible: number, extent: number): number {
