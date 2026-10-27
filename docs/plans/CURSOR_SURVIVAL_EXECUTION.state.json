@@ -1,0 +1,29 @@
+{
+  "units": {
+    "1.1": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T11:47:36+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "f196f63eeeffdbfd642473fc6714cbb52cb066b4",
+      "commits": [
+        "5acc20d3a54c0c502f5ef53dba6cc3707b48538d Add rules profiles and empty survival scenario"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `5acc20d` adds an explicit `first-playable`/`survival`\nrules profile behind the existing `game` facade. Omitted and explicit\nfirst-playable construction, snapshots and field/observation outputs keep the\nhistorical shape. Survival construction produces an empty world with no fixed\nsites, rejects legacy fixed-site scenario data, and snapshots carry\n`rules: \"survival\"` for round-trip. The browser reads `?rules=`, keeps\nfirst-playable by default, and exposes `data-rules`; a small browser suite covers\nboth selections. `docs/survival-coverage.md` maps §2 as implemented and §§3–8 as\npending with owners. README/AGENTS/direction now say the pass is started.\n\n**Landmark drift** — no source drift. The only interface change is\n`initial(options?: unknown)`; `initial()` still works and snapshots of\nfirst-playable worlds still omit `rules`.\n\n**Deviations from the work order** — survival snapshots emit `buildings: []`,\nand the parser accepts an empty survival buildings array but rejects any entry;\nthis keeps snapshot round-trip natural without admitting fixed sites. Survival\nmode keeps the existing BASE terrain and no-ops the legacy fixed-site\n`build`/`link`/`preview` paths, since terrain and input are later units. Added a\nbrowser profile-selection test in addition to the required core tests.\n\n**What the next session must know** — current internal rules guards live in\n`compose`, `impsOf`, `build`, `link`, `siteAt`, `preview` and `observe`.\n`game.snapshot` is the source of the browser's `data-rules`. Survival still uses\nthe legacy economy tick over an empty buildings map; unit 1.2 must replace the\nsurvival fixed-site rejection and add dynamic buildings/IDs before extending\nsnapshots. Historical browser tests still omit `?rules=`; add\n`?rules=first-playable` only when unit 2.3 makes survival the default. Full\n`direnv exec . just verify` passes at the committed state (220 core tests, 72\nbrowser tests, coverage and contract checks, typecheck, benchpress lint).\n\n**Open problems** — none blocking. Unknown `?rules=` values currently fall back\nto first-playable in the browser; core constructors reject them. No terrain,\ntyped input, finder or combat behavior is implemented or claimed.",
+      "session_id": "ses_e830b55edffeL71s3d6IgkDRNp",
+      "cost_usd": 0.05547631200000001,
+      "harness": "opencode",
+      "elapsed_s": 286,
+      "session_s": 273,
+      "verify_s": 12,
+      "test_s": 1,
+      "tokens": {
+        "input": 188612,
+        "output": 12286,
+        "reasoning": 18290,
+        "cache_read": 2946304
+      }
+    }
+  }
+}
