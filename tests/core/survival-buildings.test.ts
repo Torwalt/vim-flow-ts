@@ -61,7 +61,7 @@ test("survival placement accepts the interior edges and rejects anything outside
   expect(second).not.toBe(first);
   expect(ids(second)).toEqual(["b001", "b002"]);
   expect(building(second, "b002")).toEqual({
-    id: "b002", kind: "ring", center: { x: 233, y: 154 }, mana: 0, produced: 0, name: "Ring b002",
+    id: "b002", kind: "ring", center: { x: 233, y: 154 }, mana: 0, produced: 0, living: 0, name: "Ring b002",
   });
   expect(game.glyphAt(second, 234, 156)).toBe("G");
 
@@ -149,7 +149,7 @@ test("survival scenario links arbitrary dynamic endpoints and round-trips", () =
   expect(before.rally).toEqual(DEFAULT_RALLY);
   expect(before.buildings).toEqual([
     { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 400, link: null, name: "Well b001" },
-    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0, name: "Ring b002" },
+    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 300, produced: 0, living: 0, name: "Ring b002" },
   ]);
   expect(game.siteAt(state, 8, 10)).toBe("b001");
   expect(game.siteAt(state, 18, 12)).toBe("b001");

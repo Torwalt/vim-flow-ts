@@ -57,6 +57,19 @@ export interface Imp {
   readonly y: number;
 }
 
+export type Faction = "ally" | "enemy";
+
+export interface TroopObservation {
+  readonly id: string;
+  readonly faction: Faction;
+  readonly ring: DynamicBuildingId | null;
+  readonly serial: number | null;
+  readonly x: number;
+  readonly y: number;
+  readonly hp: number;
+  readonly nextAttackTick: number;
+}
+
 export type SiteObservation =
   | { readonly kind: "empty" }
   | { readonly kind: "well"; readonly mana: number; readonly link: SiteId | null }
@@ -84,6 +97,7 @@ export type BuildingObservation =
     readonly center: Cursor;
     readonly mana: number;
     readonly produced: number;
+    readonly living: number;
     readonly name: string;
   };
 
@@ -143,6 +157,9 @@ export interface Observation {
   readonly rally: Cursor | null;
   readonly links: readonly LinkObservation[];
   readonly imps: readonly Imp[];
+  readonly troops: readonly TroopObservation[];
+  readonly cursorHp: number;
+  readonly kills: number;
 }
 
 export interface GlyphField {
@@ -169,6 +186,27 @@ export interface SurvivalBuildingSetup {
   readonly name?: string;
 }
 
+export interface SurvivalAlliedSetup {
+  readonly faction: "ally";
+  readonly ring: DynamicBuildingId;
+  readonly serial: number;
+  readonly x: number;
+  readonly y: number;
+  readonly hp?: number;
+  readonly nextAttackTick?: number;
+}
+
+export interface SurvivalEnemySetup {
+  readonly faction: "enemy";
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly hp?: number;
+  readonly nextAttackTick?: number;
+}
+
+export type SurvivalTroopSetup = SurvivalAlliedSetup | SurvivalEnemySetup;
+
 export interface Scenario {
   readonly rules?: RulesProfile;
   readonly navigationOnly?: boolean;
@@ -177,6 +215,9 @@ export interface Scenario {
   readonly buildings?: readonly (BuildingSetup | SurvivalBuildingSetup)[];
   readonly pendingSource?: BuildingId | null;
   readonly rally?: Cursor;
+  readonly troops?: readonly SurvivalTroopSetup[];
+  readonly cursorHp?: number;
+  readonly kills?: number;
   readonly manualPaused?: boolean;
   readonly suspended?: boolean;
   readonly elapsedTicks?: number;
@@ -206,6 +247,28 @@ type NameMode = { readonly $: "Name"; readonly count: 0; readonly id: DynamicBui
 type FinderMode = { readonly $: "Finder"; readonly count: 0 };
 type GameMode = Mode | LeaderMode | BuildMode | InsertMode | NameMode | FinderMode;
 
+interface TroopBase {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly hp: number;
+  readonly nextAttackTick: number;
+}
+
+interface AlliedTroop extends TroopBase {
+  readonly faction: "ally";
+  readonly ring: DynamicBuildingId;
+  readonly serial: number;
+}
+
+interface EnemyTroop extends TroopBase {
+  readonly faction: "enemy";
+  readonly ring: null;
+  readonly serial: null;
+}
+
+type Troop = AlliedTroop | EnemyTroop;
+
 interface InternalWorld {
   readonly rules: RulesProfile;
   readonly navigationOnly: boolean;
@@ -214,6 +277,9 @@ interface InternalWorld {
   readonly buildings: ReadonlyMap<BuildingId, Building>;
   readonly dynamic: ReadonlyMap<DynamicBuildingId, Cursor>;
   readonly rally: Cursor | null;
+  readonly troops: readonly Troop[];
+  readonly cursorHp: number;
+  readonly kills: number;
   readonly pendingSource: BuildingId | null;
   readonly menuSelection: MenuSelection | null;
   readonly buildTarget: SiteId | null;
@@ -262,6 +328,10 @@ export const WELL_MANA_CAP = 2000;
 export const RING_MANA_CAP = 1000;
 export const SUMMON_COST = 1000;
 export const IMP_CAP = 5;
+export const CURSOR_MAX_HP = 10;
+export const ALLY_HP = 4;
+export const ENEMY_HP = 3;
+export const ATTACK_COOLDOWN = 10;
 const worldSize = WORLD_WIDTH * WORLD_HEIGHT;
 const navigation = createNavigation({ columns: WORLD_WIDTH, rows: WORLD_HEIGHT });
 
@@ -306,6 +376,7 @@ function construct(data: InternalWorld): World {
     finderOrigin: data.finderOrigin === null ? null : Object.freeze({ ...data.finderOrigin }),
     buildings: new Map(data.buildings),
     dynamic: new Map(data.dynamic),
+    troops: Object.freeze(data.troops.map(troop => Object.freeze({ ...troop }))),
     rally: data.rally === null ? null : Object.freeze({ ...data.rally }),
     navRows: data.navRows === null ? null : Object.freeze([...data.navRows]),
   }));
@@ -409,6 +480,10 @@ function candidateMatches(state: InternalWorld): readonly string[] {
 
 function asciiLower(value: string): string {
   return value.replace(/[A-Z]/g, character => String.fromCharCode(character.charCodeAt(0) + 32));
+}
+
+function compareTroopIds(left: { readonly id: string }, right: { readonly id: string }): number {
+  return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
 }
 
 function isSubsequence(query: string, text: string): boolean {
@@ -560,8 +635,88 @@ function survivalBuildingSetup(value: unknown, index: number): { id: DynamicBuil
   return {
     id,
     center,
-    building: { kind: "ring", mana, produced: integer(value.produced ?? 0, `buildings[${index}].produced`, 0, IMP_CAP), name },
+    building: {
+      kind: "ring",
+      mana,
+      produced: value.produced === undefined ? 0 : safeInteger(value.produced, `buildings[${index}].produced`),
+      name,
+    },
   };
+}
+
+const TROOP_ID_PATTERN = /^[A-Za-z0-9_.:#-]{1,32}$/;
+const ALLY_TROOP_ID_PATTERN = /^b(00[1-9]|0[12][0-9]|03[0-2])#\d+$/;
+
+function troopPosition(value: Record<string, unknown>, label: string): Cursor {
+  const cell = position(value, label);
+  if (cell.x < 1 || cell.y < 1 || cell.x > WORLD_WIDTH - 2 || cell.y > WORLD_HEIGHT - 2) {
+    fail(`${label} must be an interior cell`);
+  }
+  return cell;
+}
+
+function survivalTroopSetup(value: unknown, index: number, buildings: ReadonlyMap<BuildingId, Building>): Troop {
+  const label = `troops[${index}]`;
+  if (!isRecord(value)) fail(`${label} must be an object`);
+  const cell = troopPosition(value, label);
+  if (value.faction !== "ally" && value.faction !== "enemy") fail(`${label}.faction must be ally or enemy`);
+  const nextAttackTick = value.nextAttackTick === undefined
+    ? 0
+    : safeInteger(value.nextAttackTick, `${label}.nextAttackTick`);
+  if (value.faction === "ally") {
+    const ring = dynamicBuildingId(value.ring, `${label}.ring`);
+    const building = buildings.get(ring);
+    if (!building || building.kind !== "ring") fail(`${label}.ring must name a built ring`);
+    const serial = safeInteger(value.serial, `${label}.serial`);
+    if (serial < 1) fail(`${label}.serial must be positive`);
+    if (serial > building.produced) fail(`${label}.serial must not exceed the ring produced count`);
+    return {
+      id: `${ring}#${serial}`,
+      faction: "ally",
+      ring,
+      serial,
+      x: cell.x,
+      y: cell.y,
+      hp: value.hp === undefined ? ALLY_HP : integer(value.hp, `${label}.hp`, 1, ALLY_HP),
+      nextAttackTick,
+    };
+  }
+  if (value.ring !== undefined) fail(`${label}.ring is only available to allies`);
+  if (typeof value.id !== "string" || !TROOP_ID_PATTERN.test(value.id)) {
+    fail(`${label}.id must be 1..32 ASCII letters, digits or _.:#-`);
+  }
+  if (ALLY_TROOP_ID_PATTERN.test(value.id)) fail(`${label}.id must not use the allied ring#serial form`);
+  return {
+    id: value.id,
+    faction: "enemy",
+    ring: null,
+    serial: null,
+    x: cell.x,
+    y: cell.y,
+    hp: value.hp === undefined ? ENEMY_HP : integer(value.hp, `${label}.hp`, 1, ENEMY_HP),
+    nextAttackTick,
+  };
+}
+
+function parseTroops(spec: unknown, buildings: ReadonlyMap<BuildingId, Building>, cursorCell: Cursor): readonly Troop[] {
+  if (spec === undefined) return [];
+  if (!Array.isArray(spec)) fail("troops must be an array");
+  const troops: Troop[] = [];
+  const ids = new Set<string>();
+  const cells = new Set<string>();
+  for (const [index, value] of spec.entries()) {
+    const troop = survivalTroopSetup(value, index, buildings);
+    if (ids.has(troop.id)) fail(`duplicate troop id ${troop.id}`);
+    const cell = `${troop.x},${troop.y}`;
+    if (cells.has(cell)) fail(`troops overlap at ${cell}`);
+    if (troop.faction === "enemy" && troop.x === cursorCell.x && troop.y === cursorCell.y) {
+      fail(`enemy ${troop.id} overlaps the cursor`);
+    }
+    ids.add(troop.id);
+    cells.add(cell);
+    troops.push(troop);
+  }
+  return troops;
 }
 
 function parseScenario(spec: unknown): InternalWorld {
@@ -569,7 +724,7 @@ function parseScenario(spec: unknown): InternalWorld {
   if (!isRecord(spec)) fail("scenario must be an object");
   const allowed = new Set([
     "rules", "navigationOnly", "rows", "cursor", "buildings", "pendingSource", "rally",
-    "manualPaused", "suspended", "elapsedTicks", "remainderMs",
+    "troops", "cursorHp", "kills", "manualPaused", "suspended", "elapsedTicks", "remainderMs",
   ]);
   for (const key of Object.keys(spec)) if (!allowed.has(key)) fail(`unknown scenario field ${key}`);
   const rules = rulesProfile(spec.rules, "rules");
@@ -577,6 +732,10 @@ function parseScenario(spec: unknown): InternalWorld {
   const navigationOnly = spec.navigationOnly === true;
   if (!navigationOnly && spec.rows !== undefined) fail("rows require navigationOnly");
   if (rules !== "survival" && spec.rally !== undefined) fail("rally is only available in survival");
+  if (rules !== "survival" && spec.troops !== undefined) fail("troops are only available in survival");
+  if (rules !== "survival" && spec.cursorHp !== undefined) fail("cursorHp is only available in survival");
+  if (rules !== "survival" && spec.kills !== undefined) fail("kills are only available in survival");
+  if (navigationOnly && spec.troops !== undefined) fail("navigationOnly has no troops");
   const navRows = navigationOnly && spec.rows !== undefined ? rows(spec.rows) : navigationOnly ? Array.from({ length: WORLD_HEIGHT }, () => " ".repeat(WORLD_WIDTH)) : null;
   const position = spec.cursor === undefined ? { ...INITIAL_CURSOR } : cursor(spec.cursor);
   const buildings = new Map<BuildingId, Building>();
@@ -619,6 +778,13 @@ function parseScenario(spec: unknown): InternalWorld {
   const rally = rules === "survival"
     ? spec.rally === undefined ? { ...DEFAULT_RALLY } : rallyCell(spec.rally, "rally")
     : null;
+  const troops = rules === "survival" ? parseTroops(spec.troops, buildings, position) : [];
+  const cursorHp = rules === "survival"
+    ? spec.cursorHp === undefined ? CURSOR_MAX_HP : integer(spec.cursorHp, "cursorHp", 0, CURSOR_MAX_HP)
+    : CURSOR_MAX_HP;
+  const kills = rules === "survival"
+    ? spec.kills === undefined ? 0 : safeInteger(spec.kills, "kills")
+    : 0;
   const manualPaused = spec.manualPaused === undefined ? false : boolean(spec.manualPaused, "manualPaused");
   const suspended = spec.suspended === undefined ? false : boolean(spec.suspended, "suspended");
   const elapsedTicks = spec.elapsedTicks === undefined ? 0 : safeInteger(spec.elapsedTicks, "elapsedTicks");
@@ -631,6 +797,9 @@ function parseScenario(spec: unknown): InternalWorld {
     buildings,
     dynamic,
     rally,
+    troops,
+    cursorHp,
+    kills,
     pendingSource,
     menuSelection: null,
     buildTarget: null,
@@ -737,6 +906,7 @@ function compose(world: InternalWorld): string {
     for (const [id, center] of world.dynamic) {
       drawBuilding(cells, { id, x: center.x - 5, y: center.y - 2 }, world.buildings.get(id));
     }
+    for (const troop of [...world.troops].sort(compareTroopIds)) put(cells, troop.x, troop.y, "i");
   }
   return cells.join("");
 }
@@ -799,12 +969,33 @@ export function snapshot(world: World): Scenario {
         ? { id, kind: "well", center: { ...center }, mana: building.mana, link: isDynamicBuildingId(building.link) ? building.link : null, name }
         : { id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced, name });
     }
+    const troops: SurvivalTroopSetup[] = [...state.troops].sort(compareTroopIds).map(troop => troop.faction === "ally"
+      ? {
+        faction: "ally",
+        ring: troop.ring,
+        serial: troop.serial,
+        x: troop.x,
+        y: troop.y,
+        hp: troop.hp,
+        nextAttackTick: troop.nextAttackTick,
+      }
+      : {
+        faction: "enemy",
+        id: troop.id,
+        x: troop.x,
+        y: troop.y,
+        hp: troop.hp,
+        nextAttackTick: troop.nextAttackTick,
+      });
     return {
       ...profile,
       cursor: { ...state.cursor },
       buildings,
       ...(state.pendingSource === null ? {} : { pendingSource: state.pendingSource }),
       rally: { ...(state.rally ?? DEFAULT_RALLY) },
+      troops,
+      cursorHp: state.cursorHp,
+      kills: state.kills,
       ...clockSetup(state),
     };
   }
@@ -878,8 +1069,8 @@ function placeSurvival(state: InternalWorld, center: Cursor, kind: "well" | "rin
     }
   }
   const area = patch(cell);
-  for (const imp of impsOf(state)) {
-    if (inside(area, imp.x, imp.y)) return placementFailure(state, "Cannot build: an imp occupies the footprint");
+  for (const troop of state.troops) {
+    if (inside(area, troop.x, troop.y)) return placementFailure(state, "Cannot build: an imp occupies the footprint");
   }
   let id: DynamicBuildingId | null = null;
   for (let index = 1; index <= MAX_BUILDINGS; index++) {
@@ -931,41 +1122,154 @@ export function link(world: World, source: BuildingId, target: BuildingId): Worl
   return construct({ ...state, buildings });
 }
 
-function generate(buildings: Map<BuildingId, Building>): void {
-  for (const site of SITE_DEFINITIONS) {
-    const building = buildings.get(site.id);
+function generate(buildings: Map<BuildingId, Building>, ids: readonly BuildingId[]): void {
+  for (const id of ids) {
+    const building = buildings.get(id);
     if (building?.kind !== "well") continue;
-    buildings.set(site.id, { ...building, mana: Math.min(WELL_MANA_CAP, building.mana + WELL_GENERATION) });
+    buildings.set(id, { ...building, mana: Math.min(WELL_MANA_CAP, building.mana + WELL_GENERATION) });
   }
 }
 
-function transfer(buildings: Map<BuildingId, Building>): void {
-  for (const site of SITE_DEFINITIONS) {
-    const well = buildings.get(site.id);
+function transfer(buildings: Map<BuildingId, Building>, ids: readonly BuildingId[]): void {
+  for (const id of ids) {
+    const well = buildings.get(id);
     if (well?.kind !== "well" || well.link === null) continue;
     const target = well.link;
     const ring = buildings.get(target);
     if (ring?.kind !== "ring") continue;
     const amount = Math.min(well.mana, RING_MANA_CAP - ring.mana);
     if (amount === 0) continue;
-    buildings.set(site.id, { ...well, mana: well.mana - amount });
+    buildings.set(id, { ...well, mana: well.mana - amount });
     buildings.set(target, { ...ring, mana: ring.mana + amount });
   }
 }
 
-function summon(buildings: Map<BuildingId, Building>): void {
-  for (const site of SITE_DEFINITIONS) {
-    const ring = buildings.get(site.id);
+function summonLegacy(buildings: Map<BuildingId, Building>, ids: readonly BuildingId[]): void {
+  for (const id of ids) {
+    const ring = buildings.get(id);
     if (ring?.kind !== "ring") continue;
     if (ring.produced >= IMP_CAP || ring.mana < SUMMON_COST) continue;
-    buildings.set(site.id, { ...ring, mana: ring.mana - SUMMON_COST, produced: ring.produced + 1 });
+    buildings.set(id, { ...ring, mana: ring.mana - SUMMON_COST, produced: ring.produced + 1 });
   }
 }
 
-function tick(buildings: Map<BuildingId, Building>): void {
-  generate(buildings);
-  transfer(buildings);
-  summon(buildings);
+function spawnExit(center: Cursor, slot: ImpSlot): Cursor {
+  return { x: center.x - 5 + RALLY_OFFSET[slot], y: center.y - 2 + RALLY_ROW };
+}
+
+function summonSurvival(
+  state: InternalWorld,
+  buildings: Map<BuildingId, Building>,
+  troops: readonly Troop[],
+  tick: number,
+): { readonly buildings: Map<BuildingId, Building>; readonly troops: readonly Troop[] } {
+  let nextTroops = troops;
+  for (const id of [...state.dynamic.keys()].sort()) {
+    const ring = buildings.get(id);
+    if (ring?.kind !== "ring") continue;
+    const living = nextTroops.filter(troop => troop.faction === "ally" && troop.ring === id).length;
+    if (living >= IMP_CAP || ring.mana < SUMMON_COST) continue;
+    const center = state.dynamic.get(id);
+    if (!center) continue;
+    let exit: Cursor | null = null;
+    for (const slot of IMP_SLOTS) {
+      const candidate = spawnExit(center, slot);
+      if (candidate.x === state.cursor.x && candidate.y === state.cursor.y) continue;
+      if (nextTroops.some(troop => troop.x === candidate.x && troop.y === candidate.y)) continue;
+      exit = candidate;
+      break;
+    }
+    if (exit === null) continue;
+    const serial = ring.produced + 1;
+    buildings.set(id, { ...ring, mana: ring.mana - SUMMON_COST, produced: serial });
+    nextTroops = [...nextTroops, {
+      id: `${id}#${serial}`,
+      faction: "ally",
+      ring: id,
+      serial,
+      x: exit.x,
+      y: exit.y,
+      hp: ALLY_HP,
+      nextAttackTick: tick + ATTACK_COOLDOWN,
+    }];
+  }
+  return { buildings, troops: nextTroops };
+}
+
+function adjacent(left: Cursor, right: Cursor): boolean {
+  return Math.abs(left.x - right.x) + Math.abs(left.y - right.y) === 1;
+}
+
+function chooseTarget(attacker: Troop, troops: readonly Troop[]): Troop | null {
+  const candidates = troops.filter(troop => troop.faction !== attacker.faction && adjacent(troop, attacker));
+  if (candidates.length === 0) return null;
+  candidates.sort((left, right) => left.hp - right.hp || compareTroopIds(left, right));
+  return candidates[0] ?? null;
+}
+
+function combatPhase(
+  troops: readonly Troop[],
+  cursor: Cursor,
+  cursorHp: number,
+  tick: number,
+): { readonly troops: readonly Troop[]; readonly cursorHp: number; readonly kills: number } {
+  const damage = new Map<string, number>();
+  const cooldowns = new Map<string, number>();
+  let cursorDamage = 0;
+  for (const attacker of [...troops].sort(compareTroopIds)) {
+    if (attacker.nextAttackTick > tick) continue;
+    const target = chooseTarget(attacker, troops);
+    if (target !== null) {
+      damage.set(target.id, (damage.get(target.id) ?? 0) + 1);
+      cooldowns.set(attacker.id, tick + ATTACK_COOLDOWN);
+    } else if (attacker.faction === "enemy" && adjacent(attacker, cursor)) {
+      cursorDamage++;
+      cooldowns.set(attacker.id, tick + ATTACK_COOLDOWN);
+    }
+  }
+  let kills = 0;
+  const damaged = troops.map(troop => {
+    const received = damage.get(troop.id) ?? 0;
+    const cooldown = cooldowns.get(troop.id);
+    const hp = troop.hp - received;
+    if (troop.faction === "enemy" && hp <= 0) kills++;
+    return {
+      ...troop,
+      hp,
+      nextAttackTick: cooldown === undefined ? troop.nextAttackTick : cooldown,
+    };
+  });
+  return {
+    troops: damaged.filter(troop => troop.hp > 0),
+    cursorHp: Math.max(0, cursorHp - cursorDamage),
+    kills,
+  };
+}
+
+function tickWorld(state: InternalWorld): InternalWorld {
+  const tick = state.elapsedTicks + 1;
+  let buildings = new Map(state.buildings);
+  let troops = state.troops;
+  let cursorHp = state.cursorHp;
+  let kills = state.kills;
+  if (state.rules === "survival") {
+    const ids = [...state.dynamic.keys()].sort();
+    generate(buildings, ids);
+    transfer(buildings, ids);
+    const summoned = summonSurvival(state, buildings, troops, tick);
+    buildings = summoned.buildings;
+    troops = summoned.troops;
+    const fought = combatPhase(troops, state.cursor, cursorHp, tick);
+    troops = fought.troops;
+    cursorHp = fought.cursorHp;
+    kills += fought.kills;
+  } else {
+    const ids = SITE_DEFINITIONS.map(site => site.id);
+    generate(buildings, ids);
+    transfer(buildings, ids);
+    summonLegacy(buildings, ids);
+  }
+  return { ...state, buildings, troops, cursorHp, kills, elapsedTicks: tick };
 }
 
 export function advance(world: World, milliseconds: number): World {
@@ -979,14 +1283,13 @@ export function advance(world: World, milliseconds: number): World {
     if (remainderMs === state.remainderMs) return world;
     return construct({ ...state, remainderMs });
   }
-  const elapsedTicks = BigInt(state.elapsedTicks) + ticks;
-  if (elapsedTicks > BigInt(Number.MAX_SAFE_INTEGER)) fail("elapsed ticks exceed the safe integer domain");
-  const buildings = new Map(state.buildings);
-  for (let index = 0n; index < ticks; index++) tick(buildings);
+  if (BigInt(state.elapsedTicks) + ticks > BigInt(Number.MAX_SAFE_INTEGER)) {
+    fail("elapsed ticks exceed the safe integer domain");
+  }
+  let next = state;
+  for (let index = 0n; index < ticks; index++) next = tickWorld(next);
   return construct({
-    ...state,
-    buildings,
-    elapsedTicks: Number(elapsedTicks),
+    ...next,
     remainderMs,
   });
 }
@@ -1594,10 +1897,31 @@ export function observe(world: World): Observation {
         }
         if (state.pendingSource === id) pendingFrom = { ...center };
       } else {
-        buildings.push({ id, kind: "ring", center: { ...center }, mana: building.mana, produced: building.produced, name });
+        const living = state.troops.filter(troop => troop.faction === "ally" && troop.ring === id).length;
+        buildings.push({
+          id,
+          kind: "ring",
+          center: { ...center },
+          mana: building.mana,
+          produced: building.produced,
+          living,
+          name,
+        });
       }
     }
   }
+  const troops: TroopObservation[] = state.rules === "survival"
+    ? [...state.troops].sort(compareTroopIds).map(troop => ({
+      id: troop.id,
+      faction: troop.faction,
+      ring: troop.ring,
+      serial: troop.serial,
+      x: troop.x,
+      y: troop.y,
+      hp: troop.hp,
+      nextAttackTick: troop.nextAttackTick,
+    }))
+    : [];
   const finderEntriesNow = state.mode.$ === "Finder" && state.rules === "survival" ? finderMatches(state) : [];
   const finder: FinderObservation | null = state.mode.$ === "Finder"
     ? {
@@ -1638,6 +1962,9 @@ export function observe(world: World): Observation {
     rally: state.rally === null ? null : { ...state.rally },
     links,
     imps: impsOf(state),
+    troops,
+    cursorHp: state.cursorHp,
+    kills: state.kills,
   };
 }
 

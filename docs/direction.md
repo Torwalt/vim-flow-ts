@@ -27,9 +27,12 @@ waves, collision and cursor health.
 rules-profile boundary and empty survival scenario; defaults are planner choices
 under the author's request. The browser now defaults to survival with its
 deterministic terrain, grass, relative row gutter, typed construction, names,
-connections, shared rally command and building finder.
-`?rules=first-playable` selects the historical playable explicitly. Later troop,
-wave and combat features remain pending. The live map is
+connections, shared rally command and building finder. Living allies now have
+stable IDs, HP and attack cooldowns; survival rings replace dead allies on their
+first free spawn exit, and adjacent troops fight in one simultaneous combat
+phase with cursor HP and a kill count. `?rules=first-playable` selects the
+historical playable explicitly. Waves, troop movement, collision and game over
+remain pending. The live map is
 [survival coverage](survival-coverage.md).
 
 ## What runs now
@@ -44,9 +47,9 @@ contract remains checked as a compatibility fixture. The historical
 first-playable profile keeps Space `f` building and `i` `connect`; the default
 survival profile types construction with `i`, opens the building finder with
 Space `f`, and sends every cursor displacement, including finder jumps, through
-one shared sweep. Linked wells feed rings on exact 100 ms ticks, rings summon
-five ordered stationary imps, Normal `p` pauses, and hidden tabs suspend without
-catch-up. The HUD shows resources, link endpoints, production, mode and
+one shared sweep. Linked wells feed rings on exact 100 ms ticks; legacy rings
+summon five ordered stationary imps while survival rings track living allies and
+replace the dead, Normal `p` pauses, and hidden tabs suspend without catch-up. The HUD shows resources, link endpoints, production, mode and
 simulation time. Bun serves and bundles; Nix pins tools; Bun and Chromium check
 contract, core and development/production browser behavior.
 

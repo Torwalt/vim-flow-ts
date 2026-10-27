@@ -150,7 +150,7 @@ function describeSite(observation: Observation): { label: string; resources: str
     }
     return {
       label: `${id} ${building.name} RING`,
-      resources: `mana ${building.mana}q · ${building.produced}/5 · in ${incoming(observation, id)}`,
+      resources: `mana ${building.mana}q · ${building.living}/5 living · ${building.produced} made · in ${incoming(observation, id)}`,
     };
   }
   const site = id in observation.sites ? observation.sites[id as SiteId] : undefined;

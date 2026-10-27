@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { WELL_GENERATION } from "../../src/core/game";
 import { expect, test } from "./test";
 
 const rallyRgb = [227, 169, 79];
@@ -175,7 +176,7 @@ test("survival Insert shows candidates, completes with Tab and names a built wel
   await expect(page.locator("#hud-site")).toContainText("Foo");
   const snapshot = await page.evaluate(() => window.__vimFlowTest!.snapshot());
   expect(snapshot.buildings).toEqual([
-    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 0, link: null, name: "Foo" },
+    { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: WELL_GENERATION * 2, link: null, name: "Foo" },
   ]);
 });
 

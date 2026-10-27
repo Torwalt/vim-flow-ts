@@ -148,7 +148,7 @@ test("real survival keys construct both building kinds, default names and stable
   observation = game.observe(state);
   expect(observation.buildings).toEqual([
     { id: "b001", kind: "well", center: { x: 13, y: 10 }, mana: 0, link: null, name: "Foo" },
-    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 0, produced: 0, name: "Guard" },
+    { id: "b002", kind: "ring", center: { x: 37, y: 10 }, mana: 0, produced: 0, living: 0, name: "Guard" },
   ]);
   expect(observation.cursor).toEqual({ x: 37, y: 10 });
 });
