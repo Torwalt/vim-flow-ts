@@ -74,6 +74,31 @@
         "reasoning": 24666,
         "cache_read": 5310848
       }
+    },
+    "2.2": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T12:12:12+01:00",
+      "agent": "opencode opencode-go/deepseek-v4.1-flash high",
+      "base": "e5277aa6aa71aeb82dd0d1c5c14fab21af2064d1",
+      "commits": [
+        "79c5ccdebf07829668e68109f9a1ce272c99e969 Add typed survival construction, names and rally commands"
+      ],
+      "attempts": 1,
+      "handover": "**What landed** — commit `79c5ccd` replaces survival's Build path with typed Insert, names, connected and the shared rally command. In survival, Normal `i` opens Insert on any cell, captures the cursor cell and any footprint building, lists ordered candidates, completes with Tab, commits only on Enter, and creates a cursor-centred dynamic building through the existing placement rules. Successful builds open name editing; empty/Escape/blur/hidden retain the default `Well b001`/`Ring b002`, Enter trims a custom name. Names persist through observations and snapshots. Exact `rally` stores the captured cell, renders a flag marker and HUD coordinates; invalid/cancelled commands leave the point alone. The browser now shows Insert candidates and the live Name prompt, and prevents Tab/Enter defaults only while it handles them. Legacy Build, `connect`+Escape staging and the first-playable browser default remain unchanged.\n\n**Landmark drift** — `InsertMode` now allows a null captured building and lives beside a new `NameMode` in `src/core/world.ts`. Placement was factored into a private `placeSurvival` result helper; public `game.place` keeps its identity-on-failure contract. `Well`/`Ring` gained an optional `name`; survival `BuildingObservation`, `SurvivalBuildingSetup` and snapshots expose a required name. Observation gained `insertCell`, `nameTarget` and `candidates`. HUD gained `#hud-rally`; render gained `drawRally` and survival datasets `insertCell`, `nameTarget`, `candidates`, `rally`.\n\n**Deviations from the work order** — exact commands are recognised even when not among the visible candidates, so typing a building command on a footprint reaches placement and reports the specific overlap instead of only \"unknown command\". `rally` invalid input returns Normal with a notice while leaving the rally cell and source untouched. Scenario names are validated but kept verbatim when nonblank; only the Name prompt trims. Browser survival tests live in a new `tests/browser/survival-construction.spec.ts` rather than changing legacy suites, preserving their default-profile routing.\n\n**What the next session must know** — Survival is still opt-in and the browser still defaults to first-playable until 2.3. `observation.candidates` is filtered by the current draft only in Insert; `commandCandidates` still exposes the full ordered list internally. Name editing starts after the default name is already assigned, which is what makes Escape/blur non-destructive. `placeSurvival` still checks `impsOf`, which returns no survival imps yet; 3.x must ensure living imps are visible there. `game.snapshot` does not carry an active Insert/Name draft, matching prior snapshot behavior. Dynamic economy remain unwired.\n\n**Open problems** — none blocking. Finder, troop motion, waves and combat are absent as planned. `direnv exec . just verify` and `direnv exec . just test` pass at HEAD (248 core tests, 90 browser tests).",
+      "session_id": "ses_e82f73b2effecweA2RFo4fVlFM",
+      "cost_usd": 0.086437632,
+      "harness": "opencode",
+      "elapsed_s": 445,
+      "session_s": 426,
+      "verify_s": 18,
+      "test_s": 1,
+      "tokens": {
+        "input": 252820,
+        "output": 27229,
+        "reasoning": 25086,
+        "cache_read": 5708544
+      }
     }
   }
 }
