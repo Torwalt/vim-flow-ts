@@ -180,6 +180,22 @@ Units 1.2 through 3.3 add these public interfaces without changing the historica
 
 ## Test and interface revisions
 
+Unit 1.4 keeps survival production serials, attack ticks and kill counters inside
+the nonnegative safe-integer domain. Checked addition covers ally serial
+allocation, ally/enemy/input-contact attack cooldowns and kill accumulation; a
+transition that would leave the domain throws the same
+`Invalid world scenario: ... exceeds the safe integer domain` error family as
+`advance`'s elapsed-tick overflow, before returning a world, so the supplied
+world is unchanged. Last representable increments round-trip through
+`game.scenario(game.snapshot(world))` with exact IDs, cooldowns and kills; idle
+rings and blocked production remain valid at `Number.MAX_SAFE_INTEGER`. No
+public interface changed. `tests/core/survival-combat.test.ts` covers funded
+production overflow and the last serial, kill overflow and the last kill,
+attack-cooldown overflow and the last representable tick, plus idle and blocked
+maximum-production rings. `tests/core/survival-waves.test.ts` covers
+input-contact overflow and its last representable cooldown, and a wave spawned
+at the last representable wave tick with exact spawn cooldowns.
+
 Population validation now applies while parsing scenario troops, before any
 production or wave guard. No public interface changed.
 `tests/core/survival-combat.test.ts` rejects a `b001` ring with `produced: 6`

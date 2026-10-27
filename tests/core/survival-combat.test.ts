@@ -32,6 +32,14 @@ function building(state: World, id: string) {
   return game.observe(state).buildings.find(candidate => candidate.id === id);
 }
 
+function expectRejectedWithoutChange(state: World, action: () => unknown): void {
+  const snapshot = game.snapshot(state);
+  const observation = game.observe(state);
+  expect(action).toThrow(/exceeds the safe integer domain/);
+  expect(game.snapshot(state)).toEqual(snapshot);
+  expect(game.observe(state)).toEqual(observation);
+}
+
 test("survival troops keep identity, damage, origin ring and snapshot state", () => {
   const spec: Scenario = {
     rules: "survival",
@@ -290,6 +298,83 @@ test("survival combat cooldowns gate attacks and idle ready troops stay ready", 
 
   state = game.advance(state, TICK_MS * 10);
   expect(troop(state, "b001#1")).toMatchObject({ hp: 1, nextAttackTick: 31 });
+});
+
+test("survival production and kills report counter overflow without changing the world", () => {
+  const max = Number.MAX_SAFE_INTEGER;
+  const funded = game.scenario({ rules: "survival", buildings: ring(SUMMON_COST, max) });
+  expectRejectedWithoutChange(funded, () => game.advance(funded, TICK_MS));
+
+  const nearProduction = game.scenario({ rules: "survival", buildings: ring(SUMMON_COST, max - 1) });
+  const produced = game.advance(nearProduction, TICK_MS);
+  expect(building(produced, "b001")).toMatchObject({ produced: max, living: 1, mana: 0 });
+  expect(troop(produced, `b001#${max}`)).toMatchObject({
+    serial: max, hp: ALLY_HP, nextAttackTick: 1 + ATTACK_COOLDOWN,
+  });
+  expect(game.snapshot(game.scenario(game.snapshot(produced)))).toEqual(game.snapshot(produced));
+
+  const killing = game.scenario({
+    rules: "survival",
+    buildings: ring(0, 1),
+    kills: max,
+    troops: [
+      { faction: "ally", ring: "b001", serial: 1, x: 50, y: 50 },
+      { faction: "enemy", id: "e1", x: 51, y: 50, hp: 1, nextAttackTick: 1_000_000 },
+    ],
+  });
+  expectRejectedWithoutChange(killing, () => game.advance(killing, TICK_MS));
+
+  const nearKill = game.scenario({
+    rules: "survival",
+    buildings: ring(0, 1),
+    kills: max - 1,
+    troops: [
+      { faction: "ally", ring: "b001", serial: 1, x: 50, y: 50 },
+      { faction: "enemy", id: "e1", x: 51, y: 50, hp: 1, nextAttackTick: 1_000_000 },
+    ],
+  });
+  const killed = game.advance(nearKill, TICK_MS);
+  expect(game.observe(killed).kills).toBe(max);
+  expect(game.snapshot(game.scenario(game.snapshot(killed)))).toEqual(game.snapshot(killed));
+});
+
+test("maximum production stays valid for idle and blocked rings", () => {
+  const max = Number.MAX_SAFE_INTEGER;
+  const idle = game.advance(game.scenario({ rules: "survival", buildings: ring(0, max) }), TICK_MS);
+  expect(building(idle, "b001")).toMatchObject({ produced: max, mana: 0, living: 0 });
+  expect(game.snapshot(game.scenario(game.snapshot(idle)))).toEqual(game.snapshot(idle));
+
+  const blocked = game.scenario({
+    rules: "survival",
+    cursor: { x: 41, y: 14 },
+    buildings: ring(SUMMON_COST, max),
+    troops: [1, 2, 3, 4].map(serial => ({
+      faction: "ally" as const, ring: "b001", serial, x: 31 + serial * 2, y: 14,
+    })),
+  });
+  const held = game.advance(blocked, TICK_MS);
+  expect(building(held, "b001")).toMatchObject({ produced: max, mana: SUMMON_COST, living: 4 });
+  expect(game.snapshot(game.scenario(game.snapshot(held)))).toEqual(game.snapshot(held));
+});
+
+test("survival attack cooldowns report overflow and keep the last representable tick exact", () => {
+  const max = Number.MAX_SAFE_INTEGER;
+  const threat = (elapsedTicks: number) => game.scenario({
+    rules: "survival",
+    cursor: { x: 50, y: 50 },
+    elapsedTicks,
+    troops: [{ faction: "enemy" as const, id: "e1", x: 51, y: 50, nextAttackTick: 0 }],
+  });
+
+  const overflowing = threat(max - 1);
+  expectRejectedWithoutChange(overflowing, () => game.advance(overflowing, TICK_MS));
+
+  const attacked = game.advance(threat(max - 11), TICK_MS);
+  const observation = game.observe(attacked);
+  expect(observation.elapsedTicks).toBe(max - 10);
+  expect(observation.cursorHp).toBe(CURSOR_MAX_HP - 1);
+  expect(troop(attacked, "e1")).toMatchObject({ nextAttackTick: max });
+  expect(game.snapshot(game.scenario(game.snapshot(attacked)))).toEqual(game.snapshot(attacked));
 });
 
 test("one-target selection uses lowest HP and then stable ID without over-selecting", () => {

@@ -426,6 +426,12 @@ function safeInteger(value: unknown, label: string): number {
   return value;
 }
 
+function checkedCounter(value: number, increment: number, label: string): number {
+  const result = value + increment;
+  if (!Number.isSafeInteger(result)) fail(`${label} exceeds the safe integer domain`);
+  return result;
+}
+
 function boolean(value: unknown, label: string): boolean {
   if (typeof value !== "boolean") fail(`${label} must be a boolean`);
   return value;
@@ -1198,7 +1204,7 @@ function summonSurvival(
       break;
     }
     if (exit === null) continue;
-    const serial = ring.produced + 1;
+    const serial = checkedCounter(ring.produced, 1, `ring ${id} produced serial`);
     buildings.set(id, { ...ring, mana: ring.mana - SUMMON_COST, produced: serial });
     nextTroops = [...nextTroops, {
       id: `${id}#${serial}`,
@@ -1208,7 +1214,7 @@ function summonSurvival(
       x: exit.x,
       y: exit.y,
       hp: ALLY_HP,
-      nextAttackTick: tick + ATTACK_COOLDOWN,
+      nextAttackTick: checkedCounter(tick, ATTACK_COOLDOWN, "ally attack tick"),
     }];
   }
   return { buildings, troops: nextTroops };
@@ -1239,10 +1245,10 @@ function combatPhase(
     const target = chooseTarget(attacker, troops);
     if (target !== null) {
       damage.set(target.id, (damage.get(target.id) ?? 0) + 1);
-      cooldowns.set(attacker.id, tick + ATTACK_COOLDOWN);
+      cooldowns.set(attacker.id, checkedCounter(tick, ATTACK_COOLDOWN, "attack tick"));
     } else if (attacker.faction === "enemy" && adjacent(attacker, cursor)) {
       cursorDamage++;
-      cooldowns.set(attacker.id, tick + ATTACK_COOLDOWN);
+      cooldowns.set(attacker.id, checkedCounter(tick, ATTACK_COOLDOWN, "attack tick"));
     }
   }
   let kills = 0;
@@ -1446,7 +1452,7 @@ function spawnWave(state: InternalWorld, troops: readonly Troop[], tick: number)
       x: cell.x,
       y: cell.y,
       hp: ENEMY_HP,
-      nextAttackTick: tick + ATTACK_COOLDOWN,
+      nextAttackTick: checkedCounter(tick, ATTACK_COOLDOWN, "enemy attack tick"),
     });
   }
   return [...troops, ...spawned];
@@ -1487,7 +1493,7 @@ function tickWorld(state: InternalWorld): InternalWorld {
     const fought = combatPhase(troops, state.cursor, cursorHp, tick);
     troops = fought.troops;
     cursorHp = fought.cursorHp;
-    kills += fought.kills;
+    kills = checkedCounter(kills, fought.kills, "kills");
     const next = { ...state, buildings, troops, cursorHp, kills, elapsedTicks: tick };
     return cursorHp === 0 ? terminal(next) : next;
   }
@@ -1896,7 +1902,7 @@ function survivalDisplacement(state: InternalWorld, from: Cursor, to: Cursor): D
 function contact(state: InternalWorld, enemy: Troop): InternalWorld {
   if (enemy.nextAttackTick > state.elapsedTicks) return state;
   const troops = state.troops.map(troop => troop.id === enemy.id
-    ? { ...troop, nextAttackTick: state.elapsedTicks + ATTACK_COOLDOWN }
+    ? { ...troop, nextAttackTick: checkedCounter(state.elapsedTicks, ATTACK_COOLDOWN, "contact attack tick") }
     : troop);
   const cursorHp = Math.max(0, state.cursorHp - 1);
   const next = { ...state, troops, cursorHp };

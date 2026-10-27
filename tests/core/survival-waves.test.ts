@@ -296,6 +296,42 @@ test("collision contact damages only the first hostile and shares the attack coo
     .toBe(2 * ATTACK_COOLDOWN);
 });
 
+test("collision contact reports overflow and keeps the last representable cooldown exact", () => {
+  const max = Number.MAX_SAFE_INTEGER;
+  const threat = (elapsedTicks: number) => game.scenario({
+    rules: "survival",
+    cursor: { x: 50, y: 50 },
+    elapsedTicks,
+    troops: [{ faction: "enemy" as const, id: "e1", x: 51, y: 50, nextAttackTick: 0 }],
+  });
+
+  const overflowing = threat(max - 1);
+  const snapshot = game.snapshot(overflowing);
+  const observation = game.observe(overflowing);
+  expect(() => key(overflowing, "l")).toThrow(/exceeds the safe integer domain/);
+  expect(game.snapshot(overflowing)).toEqual(snapshot);
+  expect(game.observe(overflowing)).toEqual(observation);
+
+  const boundary = key(threat(max - 10), "l");
+  const acted = game.observe(boundary);
+  expect(acted.cursor).toEqual({ x: 50, y: 50 });
+  expect(acted.cursorHp).toBe(CURSOR_MAX_HP - 1);
+  expect(acted.troops.find(troop => troop.id === "e1")?.nextAttackTick).toBe(max);
+  expect(game.snapshot(game.scenario(game.snapshot(boundary)))).toEqual(game.snapshot(boundary));
+});
+
+test("wave spawn cooldowns stay exact at the last representable wave tick", () => {
+  const lastWaveTick = WAVE_START_TICK
+    + WAVE_INTERVAL * Math.floor((Number.MAX_SAFE_INTEGER - WAVE_START_TICK) / WAVE_INTERVAL);
+  const state = game.advance(game.scenario({ rules: "survival", elapsedTicks: lastWaveTick - 1 }), TICK_MS);
+  const observation = game.observe(state);
+  expect(observation.wave).toBeGreaterThan(0);
+  const spawned = observation.troops.filter(troop => troop.faction === "enemy");
+  expect(spawned.length).toBeGreaterThan(0);
+  for (const troop of spawned) expect(troop.nextAttackTick).toBe(lastWaveTick + ATTACK_COOLDOWN);
+  expect(game.snapshot(game.scenario(game.snapshot(state)))).toEqual(game.snapshot(state));
+});
+
 test("input death clears source and remainder, ignores later play and Enter restarts fresh", () => {
   const dead = key(game.scenario({
     rules: "survival",
