@@ -99,6 +99,31 @@
         "reasoning": 13424,
         "cache_read": 1731968
       }
+    },
+    "1.5": {
+      "status": "landed",
+      "outcome": "done",
+      "date": "2026-10-27T13:50:48+01:00",
+      "agent": "opencode deepseek/deepseek-flash high",
+      "base": "f5238903b7991860d68db5cc884fd9185d3f747f",
+      "commits": [
+        "9f47d6348362657ed8a99ba647eac11164341310 Keep survival prompts and status readable"
+      ],
+      "attempts": 1,
+      "handover": "# Handover 1.5 — Make survival prompts and status actually readable\n\n**What landed**\n\n`9f47d63 Keep survival prompts and status readable` adds a presentation-only\nsurvival overlay in `index.html` and `src/web/style.css`: `#survival-prompt`\ncarries the current Insert/Name/Finder/Build label, help text and notice;\n`#survival-status` carries HP/nearby health, wave/countdown, kills, population,\nrally coordinates, staged source, time/pause state, the faction legend and the\n`i rally Enter` hint. `src/web/main.ts` fills both overlays from the same values\nas the HUD and sets `body[data-rules]`, so the overlay appears only in survival.\nThe overlay is absolutely positioned above the unchanged 32-pixel HUD, wraps\nlong text and has `pointer-events: none`; it does not alter world geometry,\ncore rules, keyboard handling or the legacy layout.\n\n`tests/browser/survival-readability.spec.ts` adds eight real-key cases (four\nsizes in both projects). Each checks initial status, paused/running time,\nInsert candidates/draft, an unknown-command notice, a 20-character Name draft\nwith its default/commit/cancel prompt, the committed long name, a staged `b001`\nsource, connect/rally candidates at a ring, and nearby ally health. It asserts\npanel rectangles and wrapped scroll dimensions fit inside the viewport and that\nthe document does not scroll.\n\n**Landmark drift**\n\nThe work order's evidence line numbers were still close: HUD remains\n`src/web/style.css:44`-ish and the old 720px media query follows the new overlay\nrules. `describeSite`/`render` in `src/web/main.ts` are now around lines 127 and\n490; the HUD update block is near line 588. No core landmarks moved.\n\n**Deviations from the work order**\n\nNo behavioral deviation from D3. The HUD elements stay populated as before for\nexisting tests and the legacy profile; the overlays are additive rather than a\nreplacement. The overlay shows a long building name whenever the cursor is on a\nbuilding even in Normal mode, matching the done-when's long-name requirement.\n`README.md` and `docs/direction.md` received one sentence each to keep their\ndescription of the readable presentation current; `docs/survival-coverage.md`\nrecords the new DOM elements, regression suite and unchanged core interface.\n\n**What the next session must know**\n\n- The prompt panel is hidden when the mode is Normal, the cursor is not on a\n  site, and there is no notice. Notice text is rendered only while the prompt\n  panel is visible.\n- Status text is duplicated deliberately: `#hud-*` remains for legacy checks and\n  the historical layout; `#survival-*` is the readable survival surface.\n- The overlay is `position: absolute` inside `#game`, starts at `left: 56px`\n  (after the gutter) and sits at `bottom: 40px`, so it never changes canvas\n  dimensions.\n- Browser wave label starts at `wave 0` because `nextWaveTick` is 300; the first\n  spawned wave is 1. Do not expect `wave 1` before tick 300.\n- `direnv exec . just verify` passed: 300 core tests, 114 browser tests in both\n  projects, first-playable completion, contract checks, typecheck and benchpress\n  lint. `direnv exec . just test` also passed. No flake change, so\n  `just check-nix` was not run.\n- The worktree is clean after the commit.\n\n**Open problems**\n\nNone.",
+      "session_id": "ses_e829a43bcffegdj5cLKR5EJhTo",
+      "cost_usd": 0.036591564,
+      "harness": "opencode",
+      "elapsed_s": 268,
+      "session_s": 248,
+      "verify_s": 19,
+      "test_s": 1,
+      "tokens": {
+        "input": 72554,
+        "output": 10662,
+        "reasoning": 16332,
+        "cache_read": 3170688
+      }
     }
   }
 }
