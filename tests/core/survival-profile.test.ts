@@ -1,8 +1,19 @@
 import { expect, test } from "bun:test";
-import { game, RULES_PROFILES, type World } from "../../src/core/game";
+import {
+  TICK_MS,
+  WAVE_INTERVAL,
+  WAVE_START_TICK,
+  game,
+  RULES_PROFILES,
+  type World,
+} from "../../src/core/game";
 
 function rejected(spec: unknown): void {
   expect(() => game.scenario(spec)).toThrow();
+}
+
+function key(state: World, value: string): World {
+  return game.dispatch(state, { type: "key", key: value });
 }
 
 test("rules profiles are explicit and omitted construction stays first-playable", () => {
@@ -70,6 +81,67 @@ test("survival navigation-only scenarios keep their profile through snapshots", 
   const roundtrip = game.scenario(snapshot);
   expect(game.observe(roundtrip)).toEqual(game.observe(state));
   expect(game.field(roundtrip)).toEqual(game.field(state));
+});
+
+test("navigation-only survival keeps navigation and clock without waves or troops", () => {
+  const start = game.scenario({
+    rules: "survival",
+    navigationOnly: true,
+    rows: { "2": "x ^^ ~", "5": "alpha beta" },
+    cursor: { x: 0, y: 2 },
+  });
+  const totalMs = WAVE_START_TICK * TICK_MS + 3 * WAVE_INTERVAL * TICK_MS + 15_000;
+  let partitioned = start;
+  for (const part of [1, 99, 100, 300, 600, 500, 900, 12_500, 20_000, 70_000]) {
+    partitioned = game.advance(partitioned, part);
+  }
+  const once = game.advance(start, totalMs);
+  expect(game.observe(partitioned)).toEqual(game.observe(once));
+  expect(game.snapshot(partitioned)).toEqual(game.snapshot(once));
+  const observation = game.observe(once);
+  expect(observation.elapsedTicks).toBe(totalMs / TICK_MS);
+  expect(observation.remainderMs).toBe(0);
+  expect(observation.wave).toBe(0);
+  expect(observation.nextWaveTick).toBe(0);
+  expect(observation.troops).toEqual([]);
+  expect(observation.cursorHp).toBe(10);
+  expect(game.field(once)).toEqual(game.field(start));
+  expect(game.glyphAt(once, 2, 2)).toBe("^");
+  expect(game.glyphAt(once, 0, 5)).toBe("a");
+
+  const moved = key(once, "w");
+  expect(game.observe(moved).cursor).toEqual({ x: 2, y: 2 });
+  const snapshot = game.snapshot(moved);
+  const roundtrip = game.scenario(snapshot);
+  expect(game.observe(roundtrip)).toEqual(game.observe(moved));
+  expect(game.field(roundtrip)).toEqual(game.field(moved));
+  expect(game.snapshot(roundtrip)).toEqual(snapshot);
+  const future = game.advance(roundtrip, totalMs);
+  const direct = game.advance(moved, totalMs);
+  expect(game.observe(future)).toEqual(game.observe(direct));
+  expect(game.observe(future).troops).toEqual([]);
+  expect(game.observe(future).wave).toBe(0);
+
+  const clocked = game.scenario({
+    rules: "survival",
+    navigationOnly: true,
+    elapsedTicks: 12,
+    remainderMs: 34,
+  });
+  const advanced = game.advance(clocked, 250);
+  expect(game.observe(advanced).elapsedTicks).toBe(14);
+  expect(game.observe(advanced).remainderMs).toBe(84);
+  for (const stop of [{ manualPaused: true }, { suspended: true }]) {
+    const held = game.scenario({ rules: "survival", navigationOnly: true, elapsedTicks: 7, remainderMs: 89, ...stop });
+    expect(game.observe(game.advance(held, totalMs))).toEqual(game.observe(held));
+  }
+
+  const ordinary = game.advance(game.scenario({
+    rules: "survival",
+    elapsedTicks: WAVE_START_TICK - 1,
+  }), TICK_MS);
+  expect(game.observe(ordinary).wave).toBe(1);
+  expect(game.observe(ordinary).troops.filter(troop => troop.faction === "enemy")).toHaveLength(3);
 });
 
 test("survival rejects legacy fixed-site construction without changing the world", () => {

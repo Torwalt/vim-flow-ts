@@ -1467,6 +1467,7 @@ function terminal(state: InternalWorld): InternalWorld {
 
 function tickWorld(state: InternalWorld): InternalWorld {
   const tick = state.elapsedTicks + 1;
+  if (state.navigationOnly) return { ...state, elapsedTicks: tick };
   let buildings = new Map(state.buildings);
   let troops = state.troops;
   let cursorHp = state.cursorHp;

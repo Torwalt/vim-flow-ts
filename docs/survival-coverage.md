@@ -189,6 +189,18 @@ five living allies. `tests/core/survival-waves.test.ts` rejects 129 enemies
 `n0..n128` at `(20..148,20)` and accepts exactly 128 with round-trip. Existing
 replacement-production and wave-cap tests remain unchanged.
 
+Navigation-only worlds now advance only their clock: `tickWorld` returns before
+economy, wave, troop movement or combat whenever `navigationOnly` is set, so
+supplied navigation rows, cursor motion, remainder arithmetic, pause and hidden
+suspension are preserved without creating hidden troops. No public interface
+changed. The regression in `tests/core/survival-profile.test.ts` advances a
+survival navigation-only world by `105000` ms both once and through the
+`[1, 99, 100, 300, 600, 500, 900, 12500, 20000, 70000]` partition, checks zero
+troops, wave and next-wave tick across four wave boundaries, custom rows, `w`
+motion, snapshot round-trip and future advancement, exact `250` ms clock
+arithmetic, and paused/suspended clocks, while an ordinary survival control
+still spawns the wave-1 enemies.
+
 The boundary-chase fix restricts troop destinations and distance-field traversal
 to the interior `x=1..238, y=1..158` while leaving cursor navigation free to
 reach the boundary. An interior source seeds distance zero; a boundary cursor
